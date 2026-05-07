@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OP-TCG Preorder Monitor</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #181b22;
+      --text: #e6e8ee;
+      --muted: #8a93a6;
+      --accent: #ffcc00;
+      --ok: #00cc66;
+      --warn: #ffa500;
+      --danger: #ff5c5c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    header { padding: 1.5rem 2rem; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
+    h1 { font-size: 1.4rem; margin: 0; }
+    main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat { background: var(--card); padding: 1rem 1.2rem; border-radius: 8px; }
+    .stat .label { color: var(--muted); font-size: 0.85rem; }
+    .stat .val { font-size: 1.6rem; font-weight: 600; margin-top: 0.3rem; }
+
+    /* Buttons */
+    button { background: var(--accent); color: #111; border: 0; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    button:hover { opacity: 0.9; }
+    button.danger { background: var(--danger); color: #fff; }
+
+    /* Section header */
+    .section-title {
+      font-size: 1rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin: 2rem 0 0.75rem;
+    }
+
+    /* Product list */
+    .list { display: grid; gap: 0.8rem; }
+    .product { background: var(--card); padding: 1rem; border-radius: 8px; display: grid; grid-template-columns: 80px 1fr auto; gap: 1rem; align-items: center; }
+    .product img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; background: #000; }
+    .product .title { font-weight: 500; }
+    .product .meta { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    .badge.preorder   { background: rgba(255,204,0,0.2);  color: var(--accent); }
+    .badge.in_stock   { background: rgba(0,204,102,0.2);  color: var(--ok); }
+    .badge.out_of_stock { background: rgba(255,92,92,0.2); color: var(--danger); }
+    .badge.unknown    { background: rgba(138,147,166,0.2); color: var(--muted); }
+
+    .product a { color: var(--accent); text-decoration: none; }
+    .empty { text-align: center; color: var(--muted); padding: 3rem; }
+
+    /* Accordion */
+    .accordion { margin-top: 2rem; border: 1px solid #2a2d36; border-radius: 10px; overflow: hidden; }
+    .accordion-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.2rem; background: var(--card); cursor: pointer;
+      user-select: none;
+    }
+    .accordion-header:hover { background: #1e2130; }
+    .accordion-header .acc-title { font-weight: 600; display: flex; align-items: center; gap: 0.6rem; }
+    .accordion-header .acc-count { background: #2a2d36; color: var(--muted); font-size: 0.78rem; padding: 2px 8px; border-radius: 10px; }
+    .accordion-chevron { color: var(--muted); font-size: 1rem; transition: transform 0.2s; }
+    .accordion.open .accordion-chevron { transform: rotate(180deg); }
+    .accordion-body { display: none; padding: 1rem; border-top: 1px solid #2a2d36; }
+    .accordion.open .accordion-body { display: block; }
+
+    /* Lang filter */
+    .filters { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .filter-btn {
+      background: #1e2130; color: var(--muted); border: 1px solid #2a2d36;
+      padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+    .filter-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+
+    /* Lang badge */
+    .lang { display: inline-block; font-size: 0.72rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px; margin-left: 4px;
+      background: #2a2d36; color: var(--muted); vertical-align: middle; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎴 OP-TCG Preorder Monitor</h1>
+    <div style="display:flex;gap:0.6rem">
+      <button id="scanBtn">Lancer un scan</button>
+      <button id="clearBtn" class="danger">Vider la liste</button>
+    </div>
+  </header>
+  <main>
+    <div class="stats" id="stats"></div>
+    <div class="filters" id="filters"></div>
+    <div id="content"></div>
+  </main>
+
+  <script>
+    const statsEl   = document.getElementById('stats');
+    const contentEl = document.getElementById('content');
+    const filtersEl = document.getElementById('filters');
+    const btn       = document.getElementById('scanBtn');
+    const clearBtn  = document.getElementById('clearBtn');
+
+    const accState = {};
+    let activeLang = 'all'; // filtre langue actif
+
+    const LANG_LABELS = { fr: '🇫🇷 FR', en: '🇬🇧 EN', jp: '🇯🇵 JP', null: '❓ Inconnu' };
+
+    async function loadStats() {
+      const r = await fetch('/api/stats');
+      const s = await r.json();
+      statsEl.innerHTML = `
+        <div class="stat"><div class="label">Cycles</div><div class="val">${s.cycle ?? 0}</div></div>
+        <div class="stat"><div class="label">Événements</div><div class="val">${s.totalEvents ?? 0}</div></div>
+        <div class="stat"><div class="label">Erreurs</div><div class="val">${s.errors ?? 0}</div></div>
+        <div class="stat"><div class="label">Dernier run</div><div class="val" style="font-size:0.9rem">${s.lastRunAt ? new Date(s.lastRunAt).toLocaleTimeString() : '—'}</div></div>
+        <div class="stat"><div class="label">En cours</div><div class="val">${s.running ? '✅' : '💤'}</div></div>
+      `;
+    }
+
+    async function loadProducts() {
+      const r = await fetch('/api/products');
+      const d = await r.json();
+
+      if (!d.products.length) {
+        filtersEl.innerHTML = '';
+        contentEl.innerHTML = `<div class="empty">Aucun produit détecté pour le moment. Le bot scanne en arrière-plan...</div>`;
+        return;
+      }
+
+      // Langues présentes dans les données
+      const langs = ['all', ...new Set(d.products.map(p => p.lang ?? 'null'))];
+      filtersEl.innerHTML = langs.map(l => {
+        const label = l === 'all' ? 'Tous' : (LANG_LABELS[l] ?? l);
+        return `<button class="filter-btn ${activeLang === l ? 'active' : ''}" onclick="setLang('${l}')">${label}</button>`;
+      }).join('');
+
+      // Filtre actif
+      const filtered = activeLang === 'all'
+        ? d.products
+        : d.products.filter(p => (p.lang ?? 'null') === activeLang);
+
+      const available   = filtered.filter(p => p.status === 'preorder' || p.status === 'in_stock');
+      const unavailable = filtered.filter(p => p.status === 'out_of_stock' || p.status === 'unknown');
+
+      let html = '';
+
+      // ── Section principale : produits achetables ──────────────────────────
+      if (available.length) {
+        html += `<div class="section-title">Disponibles (${available.length})</div>`;
+        html += `<div class="list">${available.map(productCard).join('')}</div>`;
+      } else {
+        html += `<div class="empty" style="padding:2rem 0">Aucun produit disponible actuellement.</div>`;
+      }
+
+      // ── Accordion : ruptures ──────────────────────────────────────────────
+      if (unavailable.length) {
+        const id = 'acc-oos';
+        const isOpen = accState[id] !== false; // ouvert par défaut
+        html += `
+          <div class="accordion ${isOpen ? 'open' : ''}" id="${id}">
+            <div class="accordion-header" onclick="toggleAcc('${id}')">
+              <span class="acc-title">
+                Épuisés / Inconnus
+                <span class="acc-count">${unavailable.length}</span>
+              </span>
+              <span class="accordion-chevron">▼</span>
+            </div>
+            <div class="accordion-body">
+              <div class="list">${unavailable.map(productCard).join('')}</div>
+            </div>
+          </div>`;
+      }
+
+      contentEl.innerHTML = html;
+    }
+
+    function setLang(lang) {
+      activeLang = lang;
+      loadProducts();
+    }
+
+    function toggleAcc(id) {
+      const el = document.getElementById(id);
+      const open = el.classList.toggle('open');
+      accState[id] = open;
+    }
+
+    function productCard(p) {
+      const langLabel = p.lang ? (LANG_LABELS[p.lang] ?? p.lang) : '';
+      return `
+        <div class="product">
+          <img src="${p.image || ''}" onerror="this.style.visibility='hidden'" />
+          <div>
+            <div class="title">
+              <a href="${escapeHtml(p.url)}" target="_blank">${escapeHtml(p.title)}</a>
+              ${langLabel ? `<span class="lang">${langLabel}</span>` : ''}
+            </div>
+            <div class="meta">
+              <span class="badge ${p.status}">${badgeLabel(p.status)}</span>
+              ${p.price ? ' • ' + escapeHtml(p.price) : ''}
+              • ${escapeHtml(p.site)}
+              • vu ${timeAgo(p.lastSeenAt)}
+            </div>
+          </div>
+          <div style="text-align:right;color:var(--muted);font-size:0.8rem">
+            ${p.notifiedAt ? '🔔 notifié' : ''}
+          </div>
+        </div>`;
+    }
+
+    function badgeLabel(status) {
+      return { preorder: 'Précommande', in_stock: 'En stock', out_of_stock: 'Épuisé', unknown: 'Inconnu' }[status] ?? status;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+    }
+
+    function timeAgo(iso) {
+      const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+      if (diff < 60)    return 'il y a ' + Math.floor(diff) + 's';
+      if (diff < 3600)  return 'il y a ' + Math.floor(diff / 60) + ' min';
+      if (diff < 86400) return 'il y a ' + Math.floor(diff / 3600) + ' h';
+      return 'il y a ' + Math.floor(diff / 86400) + ' j';
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.textContent = 'Scan en cours...';
+      await fetch('/api/scan', { method: 'POST' });
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Lancer un scan'; loadAll(); }, 2000);
+    });
+
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm('Vider tous les produits détectés ?')) return;
+      clearBtn.disabled = true;
+      await fetch('/api/products', { method: 'DELETE' });
+      clearBtn.disabled = false;
+      loadAll();
+    });
+
+    async function loadAll() {
+      await Promise.all([loadStats(), loadProducts()]);
+    }
+
+    loadAll();
+    setInterval(loadAll, 5000);
+  </script>
+</body>
+</html>
