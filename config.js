@@ -89,6 +89,7 @@ export const config = {
     // Le matching est flexible : "op16" matche "OP-16", "op-16", "OP16", etc.
     // Laisser vide (TARGET_KEYWORDS=) pour notifier TOUS les produits One Piece.
     targetKeywords: parseList(process.env.TARGET_KEYWORDS, []),
+    disabledScrapers: parseList(process.env.DISABLED_SCRAPERS, []),
     // Exclure cartes unité (code OP16-001) et boosters simples (pas de box/display)
     excludeSingles: parseBool(process.env.EXCLUDE_SINGLES, true),
   },

@@ -5,6 +5,7 @@
 //   1. Créer un fichier scrapers/<boutique>.js qui étend BaseScraper
 //   2. L'importer ici et l'ajouter au tableau ci-dessous
 // ============================================================================
+import { config } from '../config.js';
 import ParkageScraper from './parkage.js';
 import CardOmatScraper from './cardomat.js';
 import CardAdvantageScraper from './cardadvantage.js';
@@ -26,6 +27,7 @@ import OupiScraper from './oupi.js';
 // import AmazonScraper from './amazon.js';
 
 export function buildScrapers() {
+  const disabled = config.filters.disabledScrapers;
   return [
     new ParkageScraper(),
     new FantasySphereScraper(),
@@ -45,5 +47,5 @@ export function buildScrapers() {
     new MysticAmbreScraper(),
     new KonobaCardsScraper(),
     // new PhilibertScraper(),
-  ];
+  ].filter((s) => !disabled.includes(s.name));
 }
