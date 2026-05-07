@@ -17,6 +17,13 @@ export class Scheduler {
     this.timer = null;
     this.cycle = 0;
     this.stats = { totalEvents: 0, errors: 0, lastRunAt: null, lastError: null };
+    this.scraperHealth = {};
+    for (const s of scrapers) {
+      this.scraperHealth[s.name] = {
+        lastStatus: null, lastOkAt: null, lastErrorAt: null,
+        lastError: null, consecutiveFails: 0, totalRuns: 0, totalErrors: 0, lastCount: 0,
+      };
+    }
   }
 
   async runCycle({ force = false } = {}) {
@@ -35,12 +42,23 @@ export class Scheduler {
         .filter((s) => s.enabled)
         .map((scraper) =>
           this.limit(async () => {
+            const h = this.scraperHealth[scraper.name];
+            h.totalRuns++;
             try {
               const rawProducts = await scraper.run();
+              h.lastStatus = 'ok';
+              h.lastOkAt = new Date().toISOString();
+              h.consecutiveFails = 0;
+              h.lastCount = rawProducts.length;
               if (!rawProducts.length) return [];
               const events = await detection.processBatch(rawProducts, { force });
               return events;
             } catch (err) {
+              h.lastStatus = 'error';
+              h.lastErrorAt = new Date().toISOString();
+              h.lastError = err.message;
+              h.consecutiveFails++;
+              h.totalErrors++;
               this.stats.errors++;
               this.stats.lastError = { at: new Date().toISOString(), scraper: scraper.name, msg: err.message };
               log.error({ scraper: scraper.name, err: err.message }, 'Scraper a planté');
@@ -89,5 +107,13 @@ export class Scheduler {
       running: this.running,
       scrapers: this.scrapers.map((s) => ({ name: s.name, enabled: s.enabled, urls: s.urls.length })),
     };
+  }
+
+  getHealth() {
+    return this.scrapers.map((s) => ({
+      name: s.name,
+      enabled: s.enabled,
+      ...this.scraperHealth[s.name],
+    }));
   }
 }

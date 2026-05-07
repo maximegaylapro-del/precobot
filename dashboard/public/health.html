@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Santé des scrapers — OP-TCG Monitor</title>
+  <style>
+    :root {
+      --bg: #0f1115; --card: #181b22; --text: #e6e8ee; --muted: #8a93a6;
+      --accent: #ffcc00; --ok: #00cc66; --warn: #ffa500; --danger: #ff5c5c;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 1.5rem 2rem; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
+    h1 { font-size: 1.4rem; margin: 0; }
+    nav { display: flex; gap: 1rem; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; padding: 0.4rem 0.8rem; border-radius: 6px; }
+    nav a:hover { background: #1e2130; color: var(--text); }
+    nav a.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+    main { padding: 2rem; max-width: 1000px; margin: 0 auto; }
+
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat { background: var(--card); padding: 1rem 1.2rem; border-radius: 8px; }
+    .stat .label { color: var(--muted); font-size: 0.85rem; }
+    .stat .val { font-size: 1.6rem; font-weight: 600; margin-top: 0.3rem; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th { text-align: left; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.6rem 1rem; border-bottom: 1px solid #2a2d36; }
+    tbody tr { border-bottom: 1px solid #1e2130; }
+    tbody tr:hover { background: #181b22; }
+    td { padding: 0.8rem 1rem; font-size: 0.9rem; vertical-align: middle; }
+
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .dot.ok      { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .dot.error   { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+    .dot.pending { background: var(--muted); }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    .badge.ok    { background: rgba(0,204,102,0.15); color: var(--ok); }
+    .badge.error { background: rgba(255,92,92,0.15); color: var(--danger); }
+    .badge.warn  { background: rgba(255,165,0,0.15); color: var(--warn); }
+    .badge.pending { background: rgba(138,147,166,0.15); color: var(--muted); }
+
+    .err-msg { color: var(--danger); font-size: 0.8rem; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .refresh { color: var(--muted); font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎴 OP-TCG Preorder Monitor</h1>
+    <nav>
+      <a href="/">Produits</a>
+      <a href="/health.html" class="active">Santé</a>
+    </nav>
+  </header>
+  <main>
+    <div class="summary" id="summary"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Scraper</th>
+          <th>Statut</th>
+          <th>Produits</th>
+          <th>Échecs consécutifs</th>
+          <th>Dernier succès</th>
+          <th>Dernière erreur</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="refresh" id="refresh" style="margin-top:1rem;text-align:right"></div>
+  </main>
+
+  <script>
+    function timeAgo(iso) {
+      if (!iso) return '—';
+      const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+      if (diff < 60)    return 'il y a ' + Math.floor(diff) + 's';
+      if (diff < 3600)  return 'il y a ' + Math.floor(diff / 60) + ' min';
+      if (diff < 86400) return 'il y a ' + Math.floor(diff / 3600) + ' h';
+      return 'il y a ' + Math.floor(diff / 86400) + ' j';
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    async function load() {
+      const data = await fetch('/api/health').then(r => r.json());
+
+      const total   = data.length;
+      const ok      = data.filter(s => s.lastStatus === 'ok').length;
+      const errors  = data.filter(s => s.lastStatus === 'error').length;
+      const pending = data.filter(s => !s.lastStatus).length;
+
+      document.getElementById('summary').innerHTML = `
+        <div class="stat"><div class="label">Total scrapers</div><div class="val">${total}</div></div>
+        <div class="stat"><div class="label">✅ OK</div><div class="val" style="color:var(--ok)">${ok}</div></div>
+        <div class="stat"><div class="label">❌ En erreur</div><div class="val" style="color:var(--danger)">${errors}</div></div>
+        <div class="stat"><div class="label">⏳ En attente</div><div class="val" style="color:var(--muted)">${pending}</div></div>
+      `;
+
+      document.getElementById('tbody').innerHTML = data.map(s => {
+        const status = s.lastStatus ?? 'pending';
+        const badgeClass = status === 'ok' ? 'ok' : status === 'error' ? 'error' : 'pending';
+        const badgeLabel = status === 'ok' ? 'OK' : status === 'error' ? 'Erreur' : 'En attente';
+        const failBadge = s.consecutiveFails >= 3
+          ? `<span class="badge error">${s.consecutiveFails}x</span>`
+          : s.consecutiveFails > 0
+            ? `<span class="badge warn">${s.consecutiveFails}x</span>`
+            : `<span style="color:var(--muted)">—</span>`;
+
+        const errMsg = s.lastError
+          ? `<div class="err-msg" title="${escapeHtml(s.lastError)}">${escapeHtml(s.lastError.slice(0, 80))}</div><div style="color:var(--muted);font-size:0.75rem">${timeAgo(s.lastErrorAt)}</div>`
+          : '<span style="color:var(--muted)">—</span>';
+
+        return `<tr>
+          <td><span class="dot ${status}"></span><strong>${escapeHtml(s.name)}</strong></td>
+          <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+          <td>${s.lastCount ?? 0}</td>
+          <td>${failBadge}</td>
+          <td style="color:var(--muted);font-size:0.85rem">${timeAgo(s.lastOkAt)}</td>
+          <td>${errMsg}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('refresh').textContent = 'Mis à jour à ' + new Date().toLocaleTimeString();
+    }
+
+    load();
+    setInterval(load, 10000);
+  </script>
+</body>
+</html>

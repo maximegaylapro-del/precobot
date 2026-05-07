@@ -49,6 +49,10 @@ export async function startDashboard(scheduler) {
     res.json({ ok: true, message: 'Scan déclenché' });
   });
 
+  app.get('/api/health', (_req, res) => {
+    res.json(scheduler.getHealth());
+  });
+
   app.delete('/api/products', async (_req, res) => {
     try {
       await storage.clearAll();
