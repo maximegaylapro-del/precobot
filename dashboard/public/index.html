@@ -3,110 +3,149 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OP-TCG Preorder Monitor</title>
+  <title>OP-TCG Monitor</title>
   <style>
     :root {
-      --bg: #0f1115;
-      --card: #181b22;
-      --text: #e6e8ee;
-      --muted: #8a93a6;
-      --accent: #ffcc00;
-      --ok: #00cc66;
-      --warn: #ffa500;
-      --danger: #ff5c5c;
+      --bg: #0a0c10;
+      --surface: #11141a;
+      --card: #181c25;
+      --border: #23283a;
+      --text: #e8eaf0;
+      --muted: #6b7394;
+      --accent: #f0c040;
+      --ok: #2ecc88;
+      --warn: #f5a623;
+      --danger: #e05555;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg); color: var(--text);
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,12,16,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; padding: 0 2rem; height: 56px;
     }
-    header { padding: 1.5rem 2rem; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
-    h1 { font-size: 1.4rem; margin: 0; }
+    .logo { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+    nav { display: flex; gap: 0.25rem; }
+    nav a {
+      color: var(--muted); text-decoration: none; font-size: 0.875rem; font-weight: 500;
+      padding: 0.35rem 0.9rem; border-radius: 6px; transition: color 0.15s, background 0.15s;
+    }
+    nav a:hover { color: var(--text); background: var(--surface); }
+    nav a.active { color: var(--accent); background: rgba(240,192,64,0.1); }
+    .header-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+    /* ── Buttons ── */
+    .btn {
+      border: 0; border-radius: 7px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; padding: 0.45rem 1rem; transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #111; }
+    .btn-danger  { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Main ── */
     main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
 
-    /* Stats */
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-    .stat { background: var(--card); padding: 1rem 1.2rem; border-radius: 8px; }
-    .stat .label { color: var(--muted); font-size: 0.85rem; }
-    .stat .val { font-size: 1.6rem; font-weight: 600; margin-top: 0.3rem; }
-
-    /* Buttons */
-    button { background: var(--accent); color: #111; border: 0; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    button:hover { opacity: 0.9; }
-    button.danger { background: var(--danger); color: #fff; }
-
-    /* Section header */
-    .section-title {
-      font-size: 1rem; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.06em;
-      margin: 2rem 0 0.75rem;
+    /* ── Stats ── */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
+    .stat {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem 1.2rem;
     }
+    .stat .label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat .val { font-size: 1.5rem; font-weight: 700; margin-top: 0.4rem; }
 
-    /* Product list */
-    .list { display: grid; gap: 0.8rem; }
-    .product { background: var(--card); padding: 1rem; border-radius: 8px; display: grid; grid-template-columns: 80px 1fr auto; gap: 1rem; align-items: center; }
-    .product img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; background: #000; }
-    .product .title { font-weight: 500; }
-    .product .meta { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
-
-    /* Badges */
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-    .badge.preorder   { background: rgba(255,204,0,0.2);  color: var(--accent); }
-    .badge.in_stock   { background: rgba(0,204,102,0.2);  color: var(--ok); }
-    .badge.out_of_stock { background: rgba(255,92,92,0.2); color: var(--danger); }
-    .badge.unknown    { background: rgba(138,147,166,0.2); color: var(--muted); }
-
-    .product a { color: var(--accent); text-decoration: none; }
-    .empty { text-align: center; color: var(--muted); padding: 3rem; }
-
-    /* Accordion */
-    .accordion { margin-top: 2rem; border: 1px solid #2a2d36; border-radius: 10px; overflow: hidden; }
-    .accordion-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 1rem 1.2rem; background: var(--card); cursor: pointer;
-      user-select: none;
-    }
-    .accordion-header:hover { background: #1e2130; }
-    .accordion-header .acc-title { font-weight: 600; display: flex; align-items: center; gap: 0.6rem; }
-    .accordion-header .acc-count { background: #2a2d36; color: var(--muted); font-size: 0.78rem; padding: 2px 8px; border-radius: 10px; }
-    .accordion-chevron { color: var(--muted); font-size: 1rem; transition: transform 0.2s; }
-    .accordion.open .accordion-chevron { transform: rotate(180deg); }
-    .accordion-body { display: none; padding: 1rem; border-top: 1px solid #2a2d36; }
-    .accordion.open .accordion-body { display: block; }
-
-    /* Lang filter */
-    .filters { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    /* ── Filters ── */
+    .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+    .filters { display: flex; gap: 0.4rem; flex-wrap: wrap; }
     .filter-btn {
-      background: #1e2130; color: var(--muted); border: 1px solid #2a2d36;
-      padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.85rem;
-      font-weight: 600; cursor: pointer;
+      background: transparent; color: var(--muted); border: 1px solid var(--border);
+      padding: 0.3rem 0.85rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
     }
     .filter-btn:hover { border-color: var(--accent); color: var(--text); }
-    .filter-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+    .filter-btn.active { background: rgba(240,192,64,0.12); color: var(--accent); border-color: var(--accent); }
 
-    /* Lang badge */
-    .lang { display: inline-block; font-size: 0.72rem; font-weight: 700;
-      padding: 1px 6px; border-radius: 4px; margin-left: 4px;
-      background: #2a2d36; color: var(--muted); vertical-align: middle; }
+    /* ── Section title ── */
+    .section-title {
+      font-size: 0.75rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.07em;
+      margin: 1.75rem 0 0.75rem;
+    }
+
+    /* ── Product cards ── */
+    .list { display: grid; gap: 0.6rem; }
+    .product {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.9rem 1rem; display: grid;
+      grid-template-columns: 72px 1fr auto; gap: 1rem; align-items: center;
+      transition: border-color 0.15s;
+    }
+    .product:hover { border-color: #34394f; }
+    .product img { width: 72px; height: 72px; object-fit: cover; border-radius: 7px; background: #0a0c10; }
+    .product .title a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 0.92rem; }
+    .product .title a:hover { color: var(--accent); }
+    .product .meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.3rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .sep { color: var(--border); }
+
+    /* ── Badges ── */
+    .badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+    .badge::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+    .badge.preorder    { background: rgba(240,192,64,0.12); color: var(--accent); }
+    .badge.preorder::before { background: var(--accent); }
+    .badge.in_stock    { background: rgba(46,204,136,0.12); color: var(--ok); }
+    .badge.in_stock::before { background: var(--ok); }
+    .badge.out_of_stock { background: rgba(224,85,85,0.1); color: var(--danger); }
+    .badge.out_of_stock::before { background: var(--danger); }
+    .badge.unknown     { background: rgba(107,115,148,0.15); color: var(--muted); }
+    .badge.unknown::before { background: var(--muted); }
+
+    .lang-badge { font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--surface); color: var(--muted); }
+
+    /* ── Accordion ── */
+    .accordion { margin-top: 1.5rem; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .accordion-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.2rem; background: var(--card); cursor: pointer; user-select: none;
+      transition: background 0.15s;
+    }
+    .accordion-header:hover { background: #1a1e28; }
+    .accordion-header .acc-title { font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.6rem; }
+    .acc-count { background: var(--surface); color: var(--muted); font-size: 0.75rem; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border); }
+    .accordion-chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; }
+    .accordion.open .accordion-chevron { transform: rotate(180deg); }
+    .accordion-body { display: none; padding: 1rem; border-top: 1px solid var(--border); }
+    .accordion.open .accordion-body { display: block; }
+
+    /* ── Empty ── */
+    .empty { text-align: center; color: var(--muted); padding: 4rem 2rem; font-size: 0.9rem; }
+    .empty p { margin-top: 0.5rem; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🎴 OP-TCG Preorder Monitor</h1>
-    <div style="display:flex;align-items:center;gap:1rem">
-      <nav style="display:flex;gap:0.5rem">
-        <a href="/" style="color:var(--accent);text-decoration:none;font-size:0.9rem;padding:0.4rem 0.8rem;border-radius:6px;border-bottom:2px solid var(--accent)">Produits</a>
-        <a href="/health.html" style="color:var(--muted);text-decoration:none;font-size:0.9rem;padding:0.4rem 0.8rem;border-radius:6px">Santé</a>
-      </nav>
-      <div style="display:flex;gap:0.6rem">
-        <button id="scanBtn">Lancer un scan</button>
-        <button id="clearBtn" class="danger">Vider la liste</button>
-      </div>
+    <div class="logo">🎴 OP-TCG Monitor</div>
+    <nav>
+      <a href="/" class="active">Produits</a>
+      <a href="/health.html">Santé</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="scanBtn">Lancer un scan</button>
+      <button class="btn btn-danger" id="clearBtn">Vider</button>
     </div>
   </header>
+
   <main>
     <div class="stats" id="stats"></div>
-    <div class="filters" id="filters"></div>
+    <div class="toolbar">
+      <div class="filters" id="filters"></div>
+    </div>
     <div id="content"></div>
   </main>
 
@@ -114,72 +153,60 @@
     const statsEl   = document.getElementById('stats');
     const contentEl = document.getElementById('content');
     const filtersEl = document.getElementById('filters');
-    const btn       = document.getElementById('scanBtn');
+    const scanBtn   = document.getElementById('scanBtn');
     const clearBtn  = document.getElementById('clearBtn');
 
     const accState = {};
-    let activeLang = 'all'; // filtre langue actif
+    let activeLang = 'all';
 
-    const LANG_LABELS = { fr: '🇫🇷 FR', en: '🇬🇧 EN', jp: '🇯🇵 JP', null: '❓ Inconnu' };
+    const LANG_LABELS = { fr: '🇫🇷 FR', en: '🇬🇧 EN', jp: '🇯🇵 JP', null: '❓' };
 
     async function loadStats() {
-      const r = await fetch('/api/stats');
-      const s = await r.json();
+      const s = await fetch('/api/stats').then(r => r.json());
       statsEl.innerHTML = `
         <div class="stat"><div class="label">Cycles</div><div class="val">${s.cycle ?? 0}</div></div>
         <div class="stat"><div class="label">Événements</div><div class="val">${s.totalEvents ?? 0}</div></div>
-        <div class="stat"><div class="label">Erreurs</div><div class="val">${s.errors ?? 0}</div></div>
-        <div class="stat"><div class="label">Dernier run</div><div class="val" style="font-size:0.9rem">${s.lastRunAt ? new Date(s.lastRunAt).toLocaleTimeString() : '—'}</div></div>
-        <div class="stat"><div class="label">En cours</div><div class="val">${s.running ? '✅' : '💤'}</div></div>
+        <div class="stat"><div class="label">Erreurs</div><div class="val" style="color:var(--danger)">${s.errors ?? 0}</div></div>
+        <div class="stat"><div class="label">Dernier run</div><div class="val" style="font-size:0.95rem">${s.lastRunAt ? new Date(s.lastRunAt).toLocaleTimeString() : '—'}</div></div>
+        <div class="stat"><div class="label">Statut</div><div class="val" style="font-size:1rem">${s.running ? '<span style="color:var(--ok)">● En cours</span>' : '<span style="color:var(--muted)">◦ Idle</span>'}</div></div>
       `;
     }
 
     async function loadProducts() {
-      const r = await fetch('/api/products');
-      const d = await r.json();
+      const d = await fetch('/api/products').then(r => r.json());
 
       if (!d.products.length) {
         filtersEl.innerHTML = '';
-        contentEl.innerHTML = `<div class="empty">Aucun produit détecté pour le moment. Le bot scanne en arrière-plan...</div>`;
+        contentEl.innerHTML = `<div class="empty"><div style="font-size:2rem">🔍</div><p>Aucun produit détecté. Le bot scanne en arrière-plan...</p></div>`;
         return;
       }
 
-      // Langues présentes dans les données
       const langs = ['all', ...new Set(d.products.map(p => p.lang ?? 'null'))];
       filtersEl.innerHTML = langs.map(l => {
         const label = l === 'all' ? 'Tous' : (LANG_LABELS[l] ?? l);
         return `<button class="filter-btn ${activeLang === l ? 'active' : ''}" onclick="setLang('${l}')">${label}</button>`;
       }).join('');
 
-      // Filtre actif
-      const filtered = activeLang === 'all'
-        ? d.products
-        : d.products.filter(p => (p.lang ?? 'null') === activeLang);
-
+      const filtered    = activeLang === 'all' ? d.products : d.products.filter(p => (p.lang ?? 'null') === activeLang);
       const available   = filtered.filter(p => p.status === 'preorder' || p.status === 'in_stock');
       const unavailable = filtered.filter(p => p.status === 'out_of_stock' || p.status === 'unknown');
 
       let html = '';
 
-      // ── Section principale : produits achetables ──────────────────────────
       if (available.length) {
-        html += `<div class="section-title">Disponibles (${available.length})</div>`;
+        html += `<div class="section-title">Disponibles · ${available.length}</div>`;
         html += `<div class="list">${available.map(productCard).join('')}</div>`;
       } else {
-        html += `<div class="empty" style="padding:2rem 0">Aucun produit disponible actuellement.</div>`;
+        html += `<div class="empty" style="padding:2rem 0"><p>Aucun produit disponible actuellement.</p></div>`;
       }
 
-      // ── Accordion : ruptures ──────────────────────────────────────────────
       if (unavailable.length) {
         const id = 'acc-oos';
-        const isOpen = accState[id] !== false; // ouvert par défaut
+        const isOpen = accState[id] !== false;
         html += `
           <div class="accordion ${isOpen ? 'open' : ''}" id="${id}">
             <div class="accordion-header" onclick="toggleAcc('${id}')">
-              <span class="acc-title">
-                Épuisés / Inconnus
-                <span class="acc-count">${unavailable.length}</span>
-              </span>
+              <span class="acc-title">Épuisés / Inconnus <span class="acc-count">${unavailable.length}</span></span>
               <span class="accordion-chevron">▼</span>
             </div>
             <div class="accordion-body">
@@ -191,49 +218,46 @@
       contentEl.innerHTML = html;
     }
 
-    function setLang(lang) {
-      activeLang = lang;
-      loadProducts();
-    }
+    function setLang(lang) { activeLang = lang; loadProducts(); }
 
     function toggleAcc(id) {
       const el = document.getElementById(id);
-      const open = el.classList.toggle('open');
-      accState[id] = open;
+      accState[id] = el.classList.toggle('open');
     }
 
     function productCard(p) {
       const langLabel = p.lang ? (LANG_LABELS[p.lang] ?? p.lang) : '';
       return `
         <div class="product">
-          <img src="${p.image || ''}" onerror="this.style.visibility='hidden'" />
+          <img src="${p.image || ''}" onerror="this.style.visibility='hidden'" loading="lazy" />
           <div>
             <div class="title">
               <a href="${escapeHtml(p.url)}" target="_blank">${escapeHtml(p.title)}</a>
-              ${langLabel ? `<span class="lang">${langLabel}</span>` : ''}
+              ${langLabel ? `<span class="lang-badge">${langLabel}</span>` : ''}
             </div>
             <div class="meta">
               <span class="badge ${p.status}">${badgeLabel(p.status)}</span>
-              ${p.price ? ' • ' + escapeHtml(p.price) : ''}
-              • ${escapeHtml(p.site)}
-              • vu ${timeAgo(p.lastSeenAt)}
+              ${p.price ? `<span class="sep">·</span>${escapeHtml(p.price)}` : ''}
+              <span class="sep">·</span>${escapeHtml(p.site)}
+              <span class="sep">·</span>${timeAgo(p.lastSeenAt)}
             </div>
           </div>
-          <div style="text-align:right;color:var(--muted);font-size:0.8rem">
-            ${p.notifiedAt ? '🔔 notifié' : ''}
+          <div style="text-align:right;color:var(--muted);font-size:0.75rem;white-space:nowrap">
+            ${p.notifiedAt ? '🔔' : ''}
           </div>
         </div>`;
     }
 
-    function badgeLabel(status) {
-      return { preorder: 'Précommande', in_stock: 'En stock', out_of_stock: 'Épuisé', unknown: 'Inconnu' }[status] ?? status;
+    function badgeLabel(s) {
+      return { preorder: 'Précommande', in_stock: 'En stock', out_of_stock: 'Épuisé', unknown: 'Inconnu' }[s] ?? s;
     }
 
     function escapeHtml(s) {
-      return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+      return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     }
 
     function timeAgo(iso) {
+      if (!iso) return '—';
       const diff = (Date.now() - new Date(iso).getTime()) / 1000;
       if (diff < 60)    return 'il y a ' + Math.floor(diff) + 's';
       if (diff < 3600)  return 'il y a ' + Math.floor(diff / 60) + ' min';
@@ -241,10 +265,10 @@
       return 'il y a ' + Math.floor(diff / 86400) + ' j';
     }
 
-    btn.addEventListener('click', async () => {
-      btn.disabled = true; btn.textContent = 'Scan en cours...';
+    scanBtn.addEventListener('click', async () => {
+      scanBtn.disabled = true; scanBtn.textContent = 'En cours...';
       await fetch('/api/scan', { method: 'POST' });
-      setTimeout(() => { btn.disabled = false; btn.textContent = 'Lancer un scan'; loadAll(); }, 2000);
+      setTimeout(() => { scanBtn.disabled = false; scanBtn.textContent = 'Lancer un scan'; loadAll(); }, 2000);
     });
 
     clearBtn.addEventListener('click', async () => {
@@ -255,10 +279,7 @@
       loadAll();
     });
 
-    async function loadAll() {
-      await Promise.all([loadStats(), loadProducts()]);
-    }
-
+    async function loadAll() { await Promise.all([loadStats(), loadProducts()]); }
     loadAll();
     setInterval(loadAll, 5000);
   </script>

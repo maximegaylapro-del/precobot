@@ -113,6 +113,7 @@ export class Scheduler {
     return this.scrapers.map((s) => ({
       name: s.name,
       enabled: s.enabled,
+      urls: s.urls,
       ...this.scraperHealth[s.name],
     }));
   }

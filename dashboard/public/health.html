@@ -6,83 +6,147 @@
   <title>Santé des scrapers — OP-TCG Monitor</title>
   <style>
     :root {
-      --bg: #0f1115; --card: #181b22; --text: #e6e8ee; --muted: #8a93a6;
-      --accent: #ffcc00; --ok: #00cc66; --warn: #ffa500; --danger: #ff5c5c;
+      --bg: #0a0c10;
+      --surface: #11141a;
+      --card: #181c25;
+      --border: #23283a;
+      --text: #e8eaf0;
+      --muted: #6b7394;
+      --accent: #f0c040;
+      --ok: #2ecc88;
+      --warn: #f5a623;
+      --danger: #e05555;
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); }
-    header { padding: 1.5rem 2rem; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; }
-    h1 { font-size: 1.4rem; margin: 0; }
-    nav { display: flex; gap: 1rem; }
-    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; padding: 0.4rem 0.8rem; border-radius: 6px; }
-    nav a:hover { background: #1e2130; color: var(--text); }
-    nav a.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,12,16,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; padding: 0 2rem; height: 56px;
+    }
+    .logo { font-size: 1rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+    nav { display: flex; gap: 0.25rem; }
+    nav a {
+      color: var(--muted); text-decoration: none; font-size: 0.875rem; font-weight: 500;
+      padding: 0.35rem 0.9rem; border-radius: 6px; transition: color 0.15s, background 0.15s;
+    }
+    nav a:hover { color: var(--text); background: var(--surface); }
+    nav a.active { color: var(--accent); background: rgba(240,192,64,0.1); }
+
+    /* ── Main ── */
     main { padding: 2rem; max-width: 1000px; margin: 0 auto; }
 
-    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-    .stat { background: var(--card); padding: 1rem 1.2rem; border-radius: 8px; }
-    .stat .label { color: var(--muted); font-size: 0.85rem; }
-    .stat .val { font-size: 1.6rem; font-weight: 600; margin-top: 0.3rem; }
+    /* ── Summary ── */
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
+    .stat .label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat .val { font-size: 1.5rem; font-weight: 700; margin-top: 0.4rem; }
 
-    table { width: 100%; border-collapse: collapse; }
-    thead th { text-align: left; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.6rem 1rem; border-bottom: 1px solid #2a2d36; }
-    tbody tr { border-bottom: 1px solid #1e2130; }
-    tbody tr:hover { background: #181b22; }
-    td { padding: 0.8rem 1rem; font-size: 0.9rem; vertical-align: middle; }
+    /* ── Scraper cards ── */
+    .scraper-list { display: grid; gap: 0.6rem; }
+    .scraper-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      overflow: hidden; transition: border-color 0.15s;
+    }
+    .scraper-card:hover { border-color: #34394f; }
+    .scraper-header {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      align-items: center; padding: 0.9rem 1.2rem;
+      cursor: pointer; user-select: none; gap: 1rem;
+    }
+    .scraper-header:hover { background: #1a1e28; }
 
-    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-    .dot.ok      { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-    .dot.error   { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+    .scraper-name { font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+    .col-label { color: var(--muted); font-size: 0.8rem; }
+    .col-val { font-size: 0.85rem; }
+
+    /* Status dot */
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot.ok      { background: var(--ok); box-shadow: 0 0 5px var(--ok); }
+    .dot.error   { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
     .dot.pending { background: var(--muted); }
 
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-    .badge.ok    { background: rgba(0,204,102,0.15); color: var(--ok); }
-    .badge.error { background: rgba(255,92,92,0.15); color: var(--danger); }
-    .badge.warn  { background: rgba(255,165,0,0.15); color: var(--warn); }
-    .badge.pending { background: rgba(138,147,166,0.15); color: var(--muted); }
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+    .badge.ok      { background: rgba(46,204,136,0.12); color: var(--ok); }
+    .badge.error   { background: rgba(224,85,85,0.12); color: var(--danger); }
+    .badge.warn    { background: rgba(245,166,35,0.12); color: var(--warn); }
+    .badge.pending { background: rgba(107,115,148,0.12); color: var(--muted); }
 
-    .err-msg { color: var(--danger); font-size: 0.8rem; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .refresh { color: var(--muted); font-size: 0.8rem; }
+    /* Expanded URLs */
+    .scraper-body {
+      display: none; border-top: 1px solid var(--border);
+      padding: 0.75rem 1.2rem; background: var(--surface);
+    }
+    .scraper-card.open .scraper-body { display: block; }
+    .url-list { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
+    .url-list li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+    .url-list a { color: var(--accent); text-decoration: none; word-break: break-all; }
+    .url-list a:hover { text-decoration: underline; }
+    .url-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+
+    .chevron { color: var(--muted); font-size: 0.7rem; transition: transform 0.2s; margin-left: auto; }
+    .scraper-card.open .chevron { transform: rotate(180deg); }
+
+    /* Table header */
+    .table-header {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      padding: 0.5rem 1.2rem; gap: 1rem; margin-bottom: 0.4rem;
+    }
+    .table-header span { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .refresh { color: var(--muted); font-size: 0.78rem; margin-top: 1.25rem; text-align: right; }
+
+    .err-msg { color: var(--danger); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🎴 OP-TCG Preorder Monitor</h1>
+    <div class="logo">🎴 OP-TCG Monitor</div>
     <nav>
       <a href="/">Produits</a>
       <a href="/health.html" class="active">Santé</a>
     </nav>
+    <div></div>
   </header>
+
   <main>
     <div class="summary" id="summary"></div>
-    <table>
-      <thead>
-        <tr>
-          <th>Scraper</th>
-          <th>Statut</th>
-          <th>Produits</th>
-          <th>Échecs consécutifs</th>
-          <th>Dernier succès</th>
-          <th>Dernière erreur</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-    <div class="refresh" id="refresh" style="margin-top:1rem;text-align:right"></div>
+
+    <div class="table-header">
+      <span>Scraper</span>
+      <span>Statut</span>
+      <span>Produits</span>
+      <span>Échecs consécutifs</span>
+      <span>Dernier succès</span>
+    </div>
+    <div class="scraper-list" id="list"></div>
+    <div class="refresh" id="refresh"></div>
   </main>
 
   <script>
+    const openState = {};
+
     function timeAgo(iso) {
       if (!iso) return '—';
       const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-      if (diff < 60)    return 'il y a ' + Math.floor(diff) + 's';
-      if (diff < 3600)  return 'il y a ' + Math.floor(diff / 60) + ' min';
-      if (diff < 86400) return 'il y a ' + Math.floor(diff / 3600) + ' h';
-      return 'il y a ' + Math.floor(diff / 86400) + ' j';
+      if (diff < 60)    return Math.floor(diff) + 's';
+      if (diff < 3600)  return Math.floor(diff / 60) + ' min';
+      if (diff < 86400) return Math.floor(diff / 3600) + ' h';
+      return Math.floor(diff / 86400) + ' j';
     }
 
     function escapeHtml(s) {
       return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function toggleCard(id) {
+      const el = document.getElementById('sc-' + id);
+      openState[id] = el.classList.toggle('open');
     }
 
     async function load() {
@@ -94,37 +158,57 @@
       const pending = data.filter(s => !s.lastStatus).length;
 
       document.getElementById('summary').innerHTML = `
-        <div class="stat"><div class="label">Total scrapers</div><div class="val">${total}</div></div>
-        <div class="stat"><div class="label">✅ OK</div><div class="val" style="color:var(--ok)">${ok}</div></div>
-        <div class="stat"><div class="label">❌ En erreur</div><div class="val" style="color:var(--danger)">${errors}</div></div>
-        <div class="stat"><div class="label">⏳ En attente</div><div class="val" style="color:var(--muted)">${pending}</div></div>
+        <div class="stat"><div class="label">Total</div><div class="val">${total}</div></div>
+        <div class="stat"><div class="label">OK</div><div class="val" style="color:var(--ok)">${ok}</div></div>
+        <div class="stat"><div class="label">En erreur</div><div class="val" style="color:var(--danger)">${errors}</div></div>
+        <div class="stat"><div class="label">En attente</div><div class="val" style="color:var(--muted)">${pending}</div></div>
       `;
 
-      document.getElementById('tbody').innerHTML = data.map(s => {
+      document.getElementById('list').innerHTML = data.map(s => {
         const status = s.lastStatus ?? 'pending';
-        const badgeClass = status === 'ok' ? 'ok' : status === 'error' ? 'error' : 'pending';
-        const badgeLabel = status === 'ok' ? 'OK' : status === 'error' ? 'Erreur' : 'En attente';
+        const isOpen = openState[s.name] || false;
+
         const failBadge = s.consecutiveFails >= 3
-          ? `<span class="badge error">${s.consecutiveFails}x</span>`
+          ? `<span class="badge error">${s.consecutiveFails}×</span>`
           : s.consecutiveFails > 0
-            ? `<span class="badge warn">${s.consecutiveFails}x</span>`
-            : `<span style="color:var(--muted)">—</span>`;
+            ? `<span class="badge warn">${s.consecutiveFails}×</span>`
+            : `<span style="color:var(--muted);font-size:0.82rem">—</span>`;
 
-        const errMsg = s.lastError
-          ? `<div class="err-msg" title="${escapeHtml(s.lastError)}">${escapeHtml(s.lastError.slice(0, 80))}</div><div style="color:var(--muted);font-size:0.75rem">${timeAgo(s.lastErrorAt)}</div>`
-          : '<span style="color:var(--muted)">—</span>';
+        const urlsHtml = (s.urls || []).map(u => `
+          <li><span class="url-dot"></span><a href="${escapeHtml(u)}" target="_blank">${escapeHtml(u)}</a></li>
+        `).join('');
 
-        return `<tr>
-          <td><span class="dot ${status}"></span><strong>${escapeHtml(s.name)}</strong></td>
-          <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
-          <td>${s.lastCount ?? 0}</td>
-          <td>${failBadge}</td>
-          <td style="color:var(--muted);font-size:0.85rem">${timeAgo(s.lastOkAt)}</td>
-          <td>${errMsg}</td>
-        </tr>`;
+        const lastOkText = s.lastOkAt
+          ? `<span style="color:var(--text)">${timeAgo(s.lastOkAt)}</span>`
+          : `<span style="color:var(--muted)">—</span>`;
+
+        const statusBadge = status === 'ok'
+          ? `<span class="badge ok">OK</span>`
+          : status === 'error'
+            ? `<span class="badge error">Erreur</span>`
+            : `<span class="badge pending">En attente</span>`;
+
+        return `
+          <div class="scraper-card ${isOpen ? 'open' : ''}" id="sc-${s.name}">
+            <div class="scraper-header" onclick="toggleCard('${s.name}')">
+              <div class="scraper-name">
+                <span class="dot ${status}"></span>
+                ${escapeHtml(s.name)}
+                <span class="chevron">▼</span>
+              </div>
+              <div class="col-val">${statusBadge}</div>
+              <div class="col-val">${s.lastCount ?? 0}</div>
+              <div class="col-val">${failBadge}</div>
+              <div class="col-val" style="color:var(--muted);font-size:0.82rem">${lastOkText}</div>
+            </div>
+            <div class="scraper-body">
+              ${s.lastError ? `<div class="err-msg" style="margin-bottom:0.6rem">⚠️ ${escapeHtml(s.lastError)}</div>` : ''}
+              <ul class="url-list">${urlsHtml || '<li style="color:var(--muted)">Aucune URL configurée</li>'}</ul>
+            </div>
+          </div>`;
       }).join('');
 
-      document.getElementById('refresh').textContent = 'Mis à jour à ' + new Date().toLocaleTimeString();
+      document.getElementById('refresh').textContent = 'Actualisé à ' + new Date().toLocaleTimeString();
     }
 
     load();
