@@ -58,6 +58,7 @@ export class BaseScraper {
     this.urls = opts.urls || [];
     this.mode = opts.mode || 'static';
     this.enabled = opts.enabled !== false;
+    this.waitSelector = opts.waitSelector || null;
     this.log = child(`scraper:${this.name}`);
   }
 
@@ -94,8 +95,11 @@ export class BaseScraper {
         waitUntil: 'domcontentloaded',
         timeout: config.scan.requestTimeoutMs,
       });
-      // petite attente pour les contenus lazy-loadés
-      await new Promise((r) => setTimeout(r, 1500));
+      if (this.waitSelector) {
+        await page.waitForSelector(this.waitSelector, { timeout: 15000 }).catch(() => {});
+      } else {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
       const html = await page.content();
       return { html, page };
     } catch (err) {

@@ -24,6 +24,7 @@ export default class OupiScraper extends BaseScraper {
       name: 'oupi',
       baseUrl: 'https://oupi.eu',
       mode: 'dynamic',
+      waitSelector: 'article.product-miniature',
       urls: opts.urls || [
         'https://oupi.eu/fr/413-precommande-one-piece',
       ],
