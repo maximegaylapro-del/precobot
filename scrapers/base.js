@@ -86,7 +86,8 @@ export class BaseScraper {
 
   async fetchDynamic(url) {
     const browser = await getBrowser();
-    const page = await browser.newPage();
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
     await page.setUserAgent(randomUA());
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'fr-FR,fr;q=0.9' });
     await page.setViewport({ width: 1366, height: 900 });
@@ -101,9 +102,9 @@ export class BaseScraper {
         await new Promise((r) => setTimeout(r, 1500));
       }
       const html = await page.content();
-      return { html, page };
+      return { html, page, context };
     } catch (err) {
-      try { await page.close(); } catch (_) {}
+      try { await context.close(); } catch (_) {}
       throw err;
     }
   }
@@ -137,12 +138,12 @@ export class BaseScraper {
     const maxAttempts = 3;
     try {
       if (this.mode === 'dynamic') {
-        const { html, page } = await this.fetchDynamic(url);
+        const { html, page, context } = await this.fetchDynamic(url);
         const $ = cheerio.load(html);
         try {
           return await this.parse({ $, html, url, page });
         } finally {
-          try { await page.close(); } catch (_) {}
+          try { await context.close(); } catch (_) {}
         }
       } else {
         const html = await this.fetchStatic(url);
