@@ -37,7 +37,7 @@ export default class MysticAmbreScraper extends BaseScraper {
       ? config.filters.targetKeywords
       : config.filters.onepieceKeywords;
 
-    $('li.media[data-gtag-item-id]').each((_, el) => {
+    $('[data-gtag-item-id]').each((_, el) => {
       const $el = $(el);
 
       // Titre (p.media-heading depuis mise à jour site)
