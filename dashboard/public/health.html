@@ -53,6 +53,20 @@
       overflow: hidden; transition: border-color 0.15s;
     }
     .scraper-card:hover { border-color: #34394f; }
+    .scraper-card.suspect { border-color: rgba(245,166,35,0.4); }
+    .scraper-card.suspect .scraper-header { background: rgba(245,166,35,0.04); }
+
+    /* ── Alert banner ── */
+    .alert-banner {
+      background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.35);
+      border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem;
+      display: flex; gap: 0.75rem; align-items: flex-start;
+    }
+    .alert-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 0.1rem; }
+    .alert-title { font-weight: 700; color: var(--warn); margin-bottom: 0.4rem; font-size: 0.9rem; }
+    .alert-list { list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
+    .alert-list li { font-size: 0.82rem; color: var(--text); }
+    .alert-list li span { color: var(--muted); }
     .scraper-header {
       display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
       align-items: center; padding: 0.9rem 1.2rem;
@@ -115,6 +129,7 @@
   </header>
 
   <main>
+    <div id="alerts"></div>
     <div class="summary" id="summary"></div>
 
     <div class="table-header">
@@ -152,14 +167,36 @@
     async function load() {
       const data = await fetch('/api/health').then(r => r.json());
 
-      const total   = data.length;
-      const ok      = data.filter(s => s.lastStatus === 'ok').length;
-      const errors  = data.filter(s => s.lastStatus === 'error').length;
-      const pending = data.filter(s => !s.lastStatus).length;
+      const total    = data.length;
+      const ok       = data.filter(s => s.lastStatus === 'ok' && !s.suspect).length;
+      const errors   = data.filter(s => s.lastStatus === 'error').length;
+      const suspects = data.filter(s => s.suspect);
+      const pending  = data.filter(s => !s.lastStatus).length;
+
+      // Bannière d'alerte
+      const alertsEl = document.getElementById('alerts');
+      if (suspects.length) {
+        alertsEl.innerHTML = `
+          <div class="alert-banner">
+            <div class="alert-icon">⚠️</div>
+            <div>
+              <div class="alert-title">${suspects.length} scraper${suspects.length > 1 ? 's' : ''} suspect${suspects.length > 1 ? 's' : ''} — 0 produit alors qu'ils en avaient récemment</div>
+              <ul class="alert-list">
+                ${suspects.map(s => {
+                  const ago = s.lastNonZeroAt ? Math.round((Date.now() - new Date(s.lastNonZeroAt).getTime()) / 60000) : null;
+                  return `<li><strong>${escapeHtml(s.name)}</strong> — ${s.zeroStreak} cycles à 0 produit <span>· dernier succès il y a ${ago ?? '?'} min</span></li>`;
+                }).join('')}
+              </ul>
+            </div>
+          </div>`;
+      } else {
+        alertsEl.innerHTML = '';
+      }
 
       document.getElementById('summary').innerHTML = `
         <div class="stat"><div class="label">Total</div><div class="val">${total}</div></div>
         <div class="stat"><div class="label">OK</div><div class="val" style="color:var(--ok)">${ok}</div></div>
+        <div class="stat"><div class="label">Suspects</div><div class="val" style="color:var(--warn)">${suspects.length}</div></div>
         <div class="stat"><div class="label">En erreur</div><div class="val" style="color:var(--danger)">${errors}</div></div>
         <div class="stat"><div class="label">En attente</div><div class="val" style="color:var(--muted)">${pending}</div></div>
       `;
@@ -182,14 +219,16 @@
           ? `<span style="color:var(--text)">${timeAgo(s.lastOkAt)}</span>`
           : `<span style="color:var(--muted)">—</span>`;
 
-        const statusBadge = status === 'ok'
-          ? `<span class="badge ok">OK</span>`
-          : status === 'error'
-            ? `<span class="badge error">Erreur</span>`
-            : `<span class="badge pending">En attente</span>`;
+        const statusBadge = s.suspect
+          ? `<span class="badge warn">⚠️ Suspect</span>`
+          : status === 'ok'
+            ? `<span class="badge ok">OK</span>`
+            : status === 'error'
+              ? `<span class="badge error">Erreur</span>`
+              : `<span class="badge pending">En attente</span>`;
 
         return `
-          <div class="scraper-card ${isOpen ? 'open' : ''}" id="sc-${s.name}">
+          <div class="scraper-card ${isOpen ? 'open' : ''} ${s.suspect ? 'suspect' : ''}" id="sc-${s.name}">
             <div class="scraper-header" onclick="toggleCard('${s.name}')">
               <div class="scraper-name">
                 <span class="dot ${status}"></span>
