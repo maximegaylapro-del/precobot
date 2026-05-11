@@ -32,11 +32,14 @@ export default class OupiScraper extends BaseScraper {
     });
   }
 
-  async parse({ $ }) {
+  async parse({ $, html }) {
     const items = [];
     const keywords = config.filters.targetKeywords.length
       ? config.filters.targetKeywords
       : config.filters.onepieceKeywords;
+
+    const allArticles = $('article.product-miniature[data-id-product]').length;
+    this.log.info({ allArticles, htmlLength: html.length }, 'oupi parse debug');
 
     $('article.product-miniature[data-id-product]').each((_, el) => {
       const $el = $(el);
