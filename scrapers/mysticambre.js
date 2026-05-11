@@ -40,8 +40,9 @@ export default class MysticAmbreScraper extends BaseScraper {
     $('li.media[data-gtag-item-id]').each((_, el) => {
       const $el = $(el);
 
-      // Titre
-      const title = $el.find('h2.media-heading a').first().text().trim();
+      // Titre (p.media-heading depuis mise à jour site)
+      const $heading = $el.find('.media-heading a').first();
+      const title = $heading.text().trim();
       if (!title) return;
 
       if (!matchesAny(title, keywords)) return;
@@ -52,8 +53,7 @@ export default class MysticAmbreScraper extends BaseScraper {
       const id = `mysticambre_${itemId}`;
 
       // Lien
-      const href = $el.find('h2.media-heading a').first().attr('href')
-        || $el.find('a').first().attr('href') || '';
+      const href = $heading.attr('href') || $el.find('a').first().attr('href') || '';
 
       // Image
       const image = $el.find('img.image-main').first().attr('src') || null;
