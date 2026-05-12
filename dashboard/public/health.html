@@ -116,6 +116,22 @@
     .refresh { color: var(--muted); font-size: 0.78rem; margin-top: 1.25rem; text-align: right; }
 
     .err-msg { color: var(--danger); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+    /* ── Section manuelle ── */
+    .section-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 2rem 0 0.75rem; }
+    .manual-list { display: grid; gap: 0.5rem; }
+    .manual-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.9rem 1.2rem; display: flex; align-items: center; gap: 1rem;
+    }
+    .manual-name { font-weight: 600; font-size: 0.9rem; min-width: 140px; color: var(--muted); }
+    .manual-urls { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .manual-urls a {
+      color: var(--accent); text-decoration: none; font-size: 0.8rem;
+      background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.2);
+      padding: 2px 10px; border-radius: 20px;
+    }
+    .manual-urls a:hover { background: rgba(240,192,64,0.18); }
   </style>
 </head>
 <body>
@@ -140,6 +156,10 @@
       <span>Dernier succès</span>
     </div>
     <div class="scraper-list" id="list"></div>
+
+    <div class="section-title">Surveillance manuelle</div>
+    <div class="manual-list" id="manual-list"></div>
+
     <div class="refresh" id="refresh"></div>
   </main>
 
@@ -250,7 +270,25 @@
       document.getElementById('refresh').textContent = 'Actualisé à ' + new Date().toLocaleTimeString();
     }
 
+    async function loadDisabled() {
+      const data = await fetch('/api/disabled').then(r => r.json());
+      const el = document.getElementById('manual-list');
+      if (!data.length) {
+        el.innerHTML = '<p style="color:var(--muted);font-size:0.82rem">Aucun scraper désactivé.</p>';
+        return;
+      }
+      el.innerHTML = data.map(s => `
+        <div class="manual-card">
+          <div class="manual-name">${escapeHtml(s.name)}</div>
+          <div class="manual-urls">
+            ${s.urls.map(u => `<a href="${escapeHtml(u)}" target="_blank">${escapeHtml(u)}</a>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
     load();
+    loadDisabled();
     setInterval(load, 10000);
   </script>
 </body>

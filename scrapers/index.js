@@ -26,26 +26,35 @@ import OupiScraper from './oupi.js';
 // import EbayScraper from './ebay.js';
 // import AmazonScraper from './amazon.js';
 
+const ALL_SCRAPERS = () => [
+  new ParkageScraper(),
+  new FantasySphereScraper(),
+  new LudisphereScraper(),
+  new GuizettefamilyScraper(),
+  new GamesAvenueScraper(),
+  new OupiScraper(),
+  new CardOmatScraper(),
+  new CardAdvantageScraper(),
+  new NevermintScraper(),
+  new MastersetScraper(),
+  new GoupiyaScraper(),
+  new Troll2JeuxScraper(),
+  new BaronCollectionsScraper(),
+  new ComptoirDesEcoliersScraper(),
+  new CardakusoScraper(),
+  new MysticAmbreScraper(),
+  new KonobaCardsScraper(),
+  // new PhilibertScraper(),
+];
+
 export function buildScrapers() {
   const disabled = config.filters.disabledScrapers;
-  return [
-    new ParkageScraper(),
-    new FantasySphereScraper(),
-    new LudisphereScraper(),
-    new GuizettefamilyScraper(),
-    new GamesAvenueScraper(),
-    new OupiScraper(),
-    new CardOmatScraper(),
-    new CardAdvantageScraper(),
-    new NevermintScraper(),
-    new MastersetScraper(),
-    new GoupiyaScraper(),
-    new Troll2JeuxScraper(),
-    new BaronCollectionsScraper(),
-    new ComptoirDesEcoliersScraper(),
-    new CardakusoScraper(),
-    new MysticAmbreScraper(),
-    new KonobaCardsScraper(),
-    // new PhilibertScraper(),
-  ].filter((s) => !disabled.includes(s.name));
+  return ALL_SCRAPERS().filter((s) => !disabled.includes(s.name));
+}
+
+export function getDisabledScrapers() {
+  const disabled = config.filters.disabledScrapers;
+  return ALL_SCRAPERS()
+    .filter((s) => disabled.includes(s.name))
+    .map((s) => ({ name: s.name, baseUrl: s.baseUrl, urls: s.urls }));
 }

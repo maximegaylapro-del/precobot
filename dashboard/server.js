@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
 import { child } from '../services/logger.js';
 import * as storage from '../services/storage.js';
+import { getDisabledScrapers } from '../scrapers/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const log = child('dashboard');
@@ -51,6 +52,10 @@ export async function startDashboard(scheduler) {
 
   app.get('/api/health', (_req, res) => {
     res.json(scheduler.getHealth());
+  });
+
+  app.get('/api/disabled', (_req, res) => {
+    res.json(getDisabledScrapers());
   });
 
   app.delete('/api/products', async (_req, res) => {
