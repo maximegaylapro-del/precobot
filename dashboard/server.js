@@ -78,10 +78,18 @@ export async function startDashboard(scheduler) {
   });
 
   app.post('/api/purchases', (req, res) => {
-    const { name, price, note } = req.body;
+    const { name, price, boutique, quantity, note } = req.body;
     if (!name || price == null) return res.status(400).json({ error: 'name et price requis' });
     const list = loadPurchases();
-    const entry = { id: randomUUID(), name, price: parseFloat(price), note: note || '', date: new Date().toISOString() };
+    const entry = {
+      id: randomUUID(),
+      name,
+      boutique: boutique || '',
+      quantity: parseInt(quantity) || 1,
+      price: parseFloat(price),
+      note: note || '',
+      date: new Date().toISOString(),
+    };
     list.push(entry);
     savePurchases(list);
     res.json(entry);
