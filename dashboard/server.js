@@ -81,12 +81,14 @@ export async function startDashboard(scheduler) {
     const { name, price, boutique, quantity, note } = req.body;
     if (!name || price == null) return res.status(400).json({ error: 'name et price requis' });
     const list = loadPurchases();
+    const { image } = req.body;
     const entry = {
       id: randomUUID(),
       name,
       boutique: boutique || '',
       quantity: parseInt(quantity) || 1,
       price: parseFloat(price),
+      image: image || '',
       note: note || '',
       date: new Date().toISOString(),
     };

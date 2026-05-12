@@ -36,84 +36,113 @@
     nav a:hover { color: var(--text); background: var(--surface); }
     nav a.active { color: var(--accent); background: rgba(240,192,64,0.1); }
 
-    main { padding: 2rem; max-width: 860px; margin: 0 auto; }
+    main { padding: 2rem; max-width: 900px; margin: 0 auto; }
 
-    /* ── Form card ── */
+    /* ── Form ── */
     .add-form {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px;
       padding: 1.5rem; margin-bottom: 1.5rem;
     }
-    .form-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1.1rem; }
-
-    .form-grid { display: grid; grid-template-columns: 2fr 1fr 100px 130px auto; gap: 0.75rem; align-items: end; }
+    .form-title {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem;
+    }
+    .form-row { display: grid; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .form-row-1 { grid-template-columns: 2fr 1fr; }
+    .form-row-2 { grid-template-columns: 1fr 90px 1fr auto; align-items: end; }
 
     .field { display: flex; flex-direction: column; gap: 0.3rem; }
     .field label { font-size: 0.72rem; color: var(--muted); font-weight: 600; letter-spacing: 0.03em; }
-
     .field input, .field select {
       background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
       color: var(--text); font-size: 0.85rem; padding: 0.5rem 0.75rem; outline: none;
-      transition: border-color 0.15s; width: 100%;
+      transition: border-color 0.15s; width: 100%; height: 36px;
     }
     .field input:focus, .field select:focus { border-color: var(--accent); }
     .field select { appearance: none; cursor: pointer; }
 
     /* Autocomplete */
-    .autocomplete-wrap { position: relative; }
-    .autocomplete-dropdown {
-      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+    .ac-wrap { position: relative; }
+    .ac-drop {
+      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 300;
       background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-      max-height: 220px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      max-height: 240px; overflow-y: auto; box-shadow: 0 12px 32px rgba(0,0,0,0.6);
     }
-    .autocomplete-dropdown.open { display: block; }
+    .ac-drop.open { display: block; }
     .ac-item {
-      padding: 0.6rem 0.9rem; cursor: pointer; font-size: 0.82rem;
-      border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.15rem;
+      padding: 0.55rem 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
     }
     .ac-item:last-child { border-bottom: none; }
-    .ac-item:hover, .ac-item.active { background: rgba(240,192,64,0.08); }
-    .ac-item-title { color: var(--text); }
-    .ac-item-meta { color: var(--muted); font-size: 0.72rem; }
+    .ac-item:hover, .ac-item.active { background: rgba(240,192,64,0.07); }
+    .ac-thumb {
+      width: 36px; height: 36px; border-radius: 5px; object-fit: cover;
+      background: var(--border); flex-shrink: 0;
+    }
+    .ac-thumb-placeholder {
+      width: 36px; height: 36px; border-radius: 5px; background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; color: var(--muted); flex-shrink: 0;
+    }
+    .ac-info { min-width: 0; }
+    .ac-title { font-size: 0.82rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ac-meta { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
 
     .btn-add {
       background: var(--accent); color: #0a0c10; border: none; border-radius: 7px;
-      font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.25rem;
-      cursor: pointer; transition: opacity 0.15s; white-space: nowrap; height: 36px;
+      font-size: 0.85rem; font-weight: 700; padding: 0 1.25rem; height: 36px;
+      cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
     }
     .btn-add:hover { opacity: 0.85; }
 
-    /* ── Total bar ── */
-    .total-bar {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;
-    }
-    .stat-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-      padding: 1rem 1.25rem;
-    }
+    /* ── Stats ── */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
     .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
     .stat-val { font-size: 1.5rem; font-weight: 700; margin-top: 0.35rem; }
 
-    /* ── List ── */
-    .purchase-list { display: grid; gap: 0.45rem; }
-    .purchase-row {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-      padding: 0.85rem 1.2rem;
-      display: grid; grid-template-columns: 1fr auto auto auto auto;
-      align-items: center; gap: 1rem;
+    /* ── Cards ── */
+    .purchase-list { display: grid; gap: 0.6rem; }
+
+    .p-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      display: flex; align-items: center; gap: 1rem; padding: 0.9rem 1rem;
+      transition: border-color 0.15s;
     }
-    .p-name { font-size: 0.88rem; font-weight: 600; }
-    .p-meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; display: flex; gap: 0.5rem; align-items: center; }
-    .p-boutique { background: rgba(107,115,148,0.15); border-radius: 4px; padding: 1px 7px; font-size: 0.7rem; }
-    .p-qty { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
-    .p-unit { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
-    .p-total { font-size: 0.95rem; font-weight: 700; color: var(--ok); white-space: nowrap; }
-    .p-date { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+    .p-card:hover { border-color: #2e3450; }
+
+    .p-img {
+      width: 56px; height: 56px; border-radius: 8px; object-fit: cover;
+      background: var(--surface); flex-shrink: 0; border: 1px solid var(--border);
+    }
+    .p-img-placeholder {
+      width: 56px; height: 56px; border-radius: 8px; background: var(--surface);
+      border: 1px solid var(--border); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .p-body { flex: 1; min-width: 0; }
+    .p-name { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .p-sub { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem; flex-wrap: wrap; }
+    .p-boutique {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      background: rgba(240,192,64,0.1); color: var(--accent); border: 1px solid rgba(240,192,64,0.2);
+      padding: 1px 7px; border-radius: 4px;
+    }
+    .p-date { font-size: 0.72rem; color: var(--muted); }
+
+    .p-pricing { text-align: right; flex-shrink: 0; }
+    .p-total { font-size: 1rem; font-weight: 700; color: var(--ok); }
+    .p-detail { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
     .btn-del {
       background: none; border: none; color: var(--muted); cursor: pointer;
-      font-size: 0.95rem; padding: 0.2rem 0.4rem; border-radius: 5px;
-      transition: color 0.15s, background 0.15s;
+      font-size: 1rem; width: 30px; height: 30px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, background 0.15s; flex-shrink: 0;
     }
-    .btn-del:hover { color: var(--danger); background: rgba(224,85,85,0.1); }
+    .btn-del:hover { color: var(--danger); background: rgba(224,85,85,0.12); }
 
     .empty { text-align: center; color: var(--muted); padding: 3rem 2rem; font-size: 0.9rem; }
   </style>
@@ -132,41 +161,46 @@
   <main>
     <div class="add-form">
       <div class="form-title">Ajouter un achat</div>
-      <div class="form-grid">
 
+      <div class="form-row form-row-1">
         <div class="field">
           <label>Produit</label>
-          <div class="autocomplete-wrap">
-            <input type="text" id="inp-name" placeholder="Rechercher… OP-17, display…" autocomplete="off" />
-            <div class="autocomplete-dropdown" id="ac-drop"></div>
+          <div class="ac-wrap">
+            <input type="text" id="inp-name" placeholder="Rechercher… OP-17, display, booster…" autocomplete="off" />
+            <div class="ac-drop" id="ac-drop"></div>
           </div>
         </div>
-
         <div class="field">
           <label>Boutique</label>
           <select id="inp-boutique">
             <option value="">— Boutique —</option>
           </select>
         </div>
+      </div>
 
-        <div class="field">
-          <label>Qté</label>
-          <input type="number" id="inp-qty" value="1" min="1" step="1" />
-        </div>
-
+      <div class="form-row form-row-2">
         <div class="field">
           <label>Prix unitaire (€)</label>
           <input type="number" id="inp-price" placeholder="102.50" step="0.01" min="0" />
         </div>
-
+        <div class="field">
+          <label>Quantité</label>
+          <input type="number" id="inp-qty" value="1" min="1" step="1" />
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:0.5rem">
+          <div class="field" style="flex:1">
+            <label>Total</label>
+            <input type="text" id="inp-total-preview" readonly placeholder="—" style="color:var(--ok);font-weight:700;cursor:default" />
+          </div>
+        </div>
         <button class="btn-add" onclick="addPurchase()">Ajouter</button>
       </div>
     </div>
 
-    <div class="total-bar">
+    <div class="stats">
       <div class="stat-card">
         <div class="stat-label">Total investi</div>
-        <div class="stat-val" id="stat-total" style="color:var(--accent)">0,00 €</div>
+        <div class="stat-val" id="stat-total" style="color:var(--accent)">—</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Lignes</div>
@@ -183,7 +217,14 @@
 
   <script>
     let allProducts = [];
-    let acIndex = -1;
+    let acResults  = [];
+    let acIndex    = -1;
+    let selectedImage = '';
+
+    const inpName  = document.getElementById('inp-name');
+    const acDrop   = document.getElementById('ac-drop');
+    const inpPrice = document.getElementById('inp-price');
+    const inpQty   = document.getElementById('inp-qty');
 
     function fmt(n) {
       return (+n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -191,57 +232,67 @@
     function fmtDate(iso) {
       return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
-    function escapeHtml(s) {
+    function esc(s) {
       return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     }
+    function norm(s) {
+      return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[-_\s]+/g, ' ');
+    }
+
+    /* ── Total preview ── */
+    function updatePreview() {
+      const p = parseFloat(inpPrice.value);
+      const q = parseInt(inpQty.value) || 1;
+      document.getElementById('inp-total-preview').value = (!isNaN(p) && p > 0) ? fmt(p * q) : '';
+    }
+    inpPrice.addEventListener('input', updatePreview);
+    inpQty.addEventListener('input', updatePreview);
 
     /* ── Autocomplete ── */
-    const inpName = document.getElementById('inp-name');
-    const acDrop  = document.getElementById('ac-drop');
-
-    function normalize(s) {
-      return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[-_\s]+/g, ' ');
-    }
-
-    function acSearch(q) {
-      if (!q || q.length < 2) return [];
-      const nq = normalize(q);
-      return allProducts
-        .filter(p => normalize(p.title).includes(nq))
-        .slice(0, 10);
-    }
-
-    function acRender(results) {
+    function acRender() {
       acIndex = -1;
-      if (!results.length) { acDrop.classList.remove('open'); return; }
-      acDrop.innerHTML = results.map((p, i) => `
-        <div class="ac-item" data-i="${i}" onmousedown="acSelect(${i})">
-          <span class="ac-item-title">${escapeHtml(p.title)}</span>
-          <span class="ac-item-meta">${escapeHtml(p.site)} · ${escapeHtml(p.price || '')}</span>
-        </div>
-      `).join('');
-      acDrop._results = results;
+      if (!acResults.length) { acDrop.classList.remove('open'); return; }
+      acDrop.innerHTML = acResults.map((p, i) => {
+        const thumb = p.image
+          ? `<img class="ac-thumb" src="${esc(p.image)}" onerror="this.style.display='none'" />`
+          : `<div class="ac-thumb-placeholder">🎴</div>`;
+        return `<div class="ac-item" data-i="${i}">
+          ${thumb}
+          <div class="ac-info">
+            <div class="ac-title">${esc(p.title)}</div>
+            <div class="ac-meta">${esc(p.site)}${p.price ? ' · ' + esc(p.price) : ''}</div>
+          </div>
+        </div>`;
+      }).join('');
+      acDrop.querySelectorAll('.ac-item').forEach((el, i) => {
+        el.addEventListener('mousedown', (e) => { e.preventDefault(); acSelect(i); });
+      });
       acDrop.classList.add('open');
     }
 
     function acSelect(i) {
-      const p = acDrop._results?.[i];
+      const p = acResults[i];
       if (!p) return;
       inpName.value = p.title;
+      selectedImage = p.image || '';
       if (p.price) {
         const num = parseFloat(p.price.replace(/[^\d,.]/g, '').replace(',', '.'));
-        if (!isNaN(num)) document.getElementById('inp-price').value = num.toFixed(2);
+        if (!isNaN(num)) { inpPrice.value = num.toFixed(2); updatePreview(); }
       }
-      // pré-sélectionne la boutique si disponible
       const sel = document.getElementById('inp-boutique');
-      if (p.site) {
-        const opt = [...sel.options].find(o => o.value === p.site);
-        if (opt) sel.value = p.site;
-      }
+      const opt = [...sel.options].find(o => o.value === p.site);
+      if (opt) sel.value = p.site;
       acDrop.classList.remove('open');
     }
 
-    inpName.addEventListener('input', () => acRender(acSearch(inpName.value)));
+    inpName.addEventListener('input', () => {
+      selectedImage = '';
+      const q = inpName.value.trim();
+      if (q.length < 2) { acResults = []; acDrop.classList.remove('open'); return; }
+      const nq = norm(q);
+      acResults = allProducts.filter(p => norm(p.title).includes(nq)).slice(0, 12);
+      acRender();
+    });
     inpName.addEventListener('blur', () => setTimeout(() => acDrop.classList.remove('open'), 150));
     inpName.addEventListener('keydown', e => {
       const items = acDrop.querySelectorAll('.ac-item');
@@ -254,35 +305,34 @@
         items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
         e.preventDefault();
       } else if (e.key === 'Enter') {
-        if (acIndex >= 0) { acSelect(acIndex); }
+        if (acIndex >= 0) acSelect(acIndex);
         else { acDrop.classList.remove('open'); addPurchase(); }
       } else if (e.key === 'Escape') {
         acDrop.classList.remove('open');
       }
     });
 
-    /* ── Init boutiques ── */
+    /* ── Boutiques ── */
     async function loadBoutiques() {
       const [active, disabled] = await Promise.all([
         fetch('/api/health').then(r => r.json()),
         fetch('/api/disabled').then(r => r.json()),
       ]);
       const sel = document.getElementById('inp-boutique');
-      [...active, ...disabled].forEach(s => {
+      [...active, ...disabled].sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
         const opt = document.createElement('option');
-        opt.value = s.name;
-        opt.textContent = s.name;
+        opt.value = s.name; opt.textContent = s.name;
         sel.appendChild(opt);
       });
     }
 
-    /* ── Init produits pour autocomplete ── */
+    /* ── Produits ── */
     async function loadProducts() {
       const data = await fetch('/api/products').then(r => r.json());
       allProducts = data.products || [];
     }
 
-    /* ── Liste achats ── */
+    /* ── Liste ── */
     async function load() {
       const data = await fetch('/api/purchases').then(r => r.json());
       const total = data.reduce((s, p) => s + p.price * (p.quantity || 1), 0);
@@ -297,50 +347,70 @@
         list.innerHTML = '<div class="empty">Aucun achat enregistré.</div>';
         return;
       }
+
       list.innerHTML = data.slice().reverse().map(p => {
         const qty = p.quantity || 1;
         const lineTotal = p.price * qty;
+        const imgEl = p.image
+          ? `<img class="p-img" src="${esc(p.image)}" onerror="this.outerHTML='<div class=\\'p-img-placeholder\\'>🎴</div>'" />`
+          : `<div class="p-img-placeholder">🎴</div>`;
+        const boutiqueEl = p.boutique
+          ? `<span class="p-boutique">${esc(p.boutique)}</span>` : '';
+        const detailEl = qty > 1
+          ? `${qty} × ${fmt(p.price)}` : fmt(p.price);
         return `
-          <div class="purchase-row">
-            <div>
-              <div class="p-name">${escapeHtml(p.name)}</div>
-              <div class="p-meta">
-                ${p.boutique ? `<span class="p-boutique">${escapeHtml(p.boutique)}</span>` : ''}
-                ${p.note ? `<span>${escapeHtml(p.note)}</span>` : ''}
+          <div class="p-card" id="pc-${esc(p.id)}">
+            ${imgEl}
+            <div class="p-body">
+              <div class="p-name">${esc(p.name)}</div>
+              <div class="p-sub">
+                ${boutiqueEl}
+                <span class="p-date">${fmtDate(p.date)}</span>
               </div>
             </div>
-            <div class="p-qty">×${qty}</div>
-            <div class="p-unit">${fmt(p.price)} / u.</div>
-            <div class="p-total">${fmt(lineTotal)}</div>
-            <div class="p-date">${fmtDate(p.date)}</div>
-            <button class="btn-del" onclick="deletePurchase('${p.id}')" title="Supprimer">✕</button>
+            <div class="p-pricing">
+              <div class="p-total">${fmt(lineTotal)}</div>
+              <div class="p-detail">${detailEl}</div>
+            </div>
+            <button class="btn-del" data-id="${esc(p.id)}" title="Supprimer">✕</button>
           </div>`;
       }).join('');
+
+      list.querySelectorAll('.btn-del').forEach(btn => {
+        btn.addEventListener('click', () => deletePurchase(btn.dataset.id));
+      });
     }
 
     async function addPurchase() {
       const name     = inpName.value.trim();
       const boutique = document.getElementById('inp-boutique').value;
-      const qty      = parseInt(document.getElementById('inp-qty').value) || 1;
-      const price    = parseFloat(document.getElementById('inp-price').value);
-      if (!name || isNaN(price)) return;
+      const qty      = parseInt(inpQty.value) || 1;
+      const price    = parseFloat(inpPrice.value);
+      if (!name || isNaN(price) || price <= 0) return;
 
       await fetch('/api/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, boutique, quantity: qty, price }),
+        body: JSON.stringify({ name, boutique, quantity: qty, price, image: selectedImage }),
       });
       inpName.value = '';
-      document.getElementById('inp-price').value = '';
-      document.getElementById('inp-qty').value = '1';
+      inpPrice.value = '';
+      inpQty.value = '1';
       document.getElementById('inp-boutique').value = '';
+      document.getElementById('inp-total-preview').value = '';
+      selectedImage = '';
+      acResults = [];
       acDrop.classList.remove('open');
       load();
     }
 
-    document.getElementById('inp-price').addEventListener('keydown', e => {
-      if (e.key === 'Enter') addPurchase();
-    });
+    async function deletePurchase(id) {
+      await fetch('/api/purchases/' + id, { method: 'DELETE' });
+      load();
+    }
+
+    inpQty.addEventListener('keydown', e => { if (e.key === 'Enter') addPurchase(); });
+    inpPrice.addEventListener('keydown', e => { if (e.key === 'Enter') addPurchase(); });
 
     loadBoutiques();
     loadProducts();
