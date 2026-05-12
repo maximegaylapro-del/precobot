@@ -60,17 +60,23 @@ export default class LeCoinDesBaronsScraper extends BaseScraper {
       const $img = $card.find('.card-image img').first();
       const image = $img.attr('data-lazy-src') || $img.attr('src') || null;
 
-      // Statut
-      const stockStatus = data.stockstatus; // "instock" | "onbackorder" | "outofstock"
-      const stockLevel  = parseInt(data.stocklevel ?? 0, 10);
+      // Statut — source de vérité = le bouton HTML, pas le GTM
+      // <button class="add_to_cart_button"> = commandable (stock ou preco ouverte)
+      // <a class="in-basket"> avec "Rupture" = non commandable (rupture ou preco fermée)
+      const $btn      = $card.find('button.add_to_cart_button');
+      const $linkBtn  = $card.find('.buttons a.in-basket');
+      const isRupture = !$btn.length
+        || /rupture/i.test($linkBtn.find('span').text());
+
+      const hasPreorder = /pr[ée]commande/i.test($card.find('.card-right').text());
 
       let status;
-      if (stockStatus === 'onbackorder') {
-        status = 'preorder';
-      } else if (stockStatus === 'instock' && stockLevel > 0) {
-        status = 'in_stock';
-      } else {
+      if (isRupture) {
         status = 'out_of_stock';
+      } else if (hasPreorder) {
+        status = 'preorder';
+      } else {
+        status = 'in_stock';
       }
 
       items.push({
