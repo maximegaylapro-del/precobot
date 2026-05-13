@@ -24,6 +24,7 @@ import GuizettefamilyScraper from './guizettefamily.js';
 import GamesAvenueScraper from './gamesavenue.js';
 import OupiScraper from './oupi.js';
 import LeCoinDesBaronsScraper from './lecoindesbarons.js';
+import LudotrotterScraper from './ludotrotter.js';
 // import EbayScraper from './ebay.js';
 // import AmazonScraper from './amazon.js';
 
@@ -35,6 +36,7 @@ const ALL_SCRAPERS = () => [
   new GamesAvenueScraper(),
   new OupiScraper(),
   new LeCoinDesBaronsScraper(),
+  new LudotrotterScraper(),
   new CardOmatScraper(),
   new CardAdvantageScraper(),
   new NevermintScraper(),
