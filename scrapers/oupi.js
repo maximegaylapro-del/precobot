@@ -24,6 +24,7 @@ export default class OupiScraper extends BaseScraper {
       name: 'oupi',
       baseUrl: 'https://oupi.eu',
       mode: 'dynamic',
+      waitUntil: 'networkidle2',
       waitSelector: 'article.product-miniature',
       urls: opts.urls || [
         'https://oupi.eu/fr/413-precommande-one-piece',
@@ -32,14 +33,11 @@ export default class OupiScraper extends BaseScraper {
     });
   }
 
-  async parse({ $, html }) {
+  async parse({ $ }) {
     const items = [];
     const keywords = config.filters.targetKeywords.length
       ? config.filters.targetKeywords
       : config.filters.onepieceKeywords;
-
-    const allArticles = $('article.product-miniature[data-id-product]').length;
-    this.log.info({ allArticles, htmlLength: html.length, htmlSnippet: html.slice(0, 500) }, 'oupi parse debug');
 
     $('article.product-miniature[data-id-product]').each((_, el) => {
       const $el = $(el);

@@ -59,6 +59,7 @@ export class BaseScraper {
     this.mode = opts.mode || 'static';
     this.enabled = opts.enabled !== false;
     this.waitSelector = opts.waitSelector || null;
+    this.waitUntil = opts.waitUntil || 'domcontentloaded';
     this.log = child(`scraper:${this.name}`);
   }
 
@@ -93,7 +94,7 @@ export class BaseScraper {
     await page.setViewport({ width: 1366, height: 900 });
     try {
       await page.goto(url, {
-        waitUntil: 'domcontentloaded',
+        waitUntil: this.waitUntil,
         timeout: config.scan.requestTimeoutMs,
       });
       if (this.waitSelector) {
