@@ -79,6 +79,8 @@ export const config = {
       'one piece tcg',
       'op-',
       'op16',
+      'spc-01',
+      'super premium collection',
     ]),
     blacklistKeywords: parseList(process.env.BLACKLIST_KEYWORDS, [
       'proxy',
