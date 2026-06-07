@@ -58,7 +58,9 @@ export class Scheduler {
   }
 
   async _checkAlerts() {
-    if (!config.notifications.discord.webhookUrl) return;
+    const healthUrl = config.notifications.discord.healthWebhookUrl
+      || config.notifications.discord.webhookUrl;
+    if (!healthUrl) return;
     const now = Date.now();
     const suspects = [];
 
@@ -83,7 +85,7 @@ export class Scheduler {
     }).join('\n');
 
     try {
-      await axios.post(config.notifications.discord.webhookUrl, {
+      await axios.post(healthUrl, {
         embeds: [{
           title: '⚠️ Alerte maintenance scrapers',
           description: `Les scrapers suivants retournent 0 produit alors qu'ils en avaient récemment :\n\n${lines}\n\nVérifiez la page Santé du dashboard.`,

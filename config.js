@@ -100,6 +100,7 @@ export const config = {
     discord: {
       enabled: !!process.env.DISCORD_WEBHOOK_URL,
       webhookUrl: process.env.DISCORD_WEBHOOK_URL || null,
+      healthWebhookUrl: process.env.DISCORD_HEALTH_WEBHOOK_URL || null,
     },
     email: {
       enabled: parseBool(process.env.EMAIL_ENABLED, false),
