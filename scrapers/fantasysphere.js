@@ -26,6 +26,7 @@ export default class FantasySphereScraper extends BaseScraper {
       mode: 'static',
       urls: opts.urls || [
         'https://www.fantasysphere.net/jeux-de-cartes-a-collectionner/one-piece-tcg/boite-de-boosters-one-piece/',
+        'https://www.fantasysphere.net/preorder',
       ],
       ...opts,
     });
