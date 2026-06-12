@@ -3,7 +3,6 @@
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import axios from 'axios';
 import pLimit from 'p-limit';
 import { config } from '../config.js';
 import { child } from './logger.js';
@@ -13,11 +12,8 @@ import * as notifier from './notifier.js';
 const log = child('scheduler');
 
 const HEALTH_FILE = join(config.dataDir, 'scraper-health.json');
-// Nombre de cycles consécutifs à 0 avant d'alerter (~30 min à 3 min/cycle)
-const ZERO_STREAK_THRESHOLD = 10;
-// Délai minimum entre deux alertes Discord pour le même scraper (24h)
-const ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // Un scraper est "suspect" seulement s'il avait des produits dans les 7 derniers jours
+const ZERO_STREAK_THRESHOLD = 10;
 const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class Scheduler {
@@ -33,7 +29,7 @@ export class Scheduler {
       this.scraperHealth[s.name] = {
         lastStatus: null, lastOkAt: null, lastErrorAt: null,
         lastError: null, consecutiveFails: 0, totalRuns: 0, totalErrors: 0,
-        lastCount: 0, zeroStreak: 0, lastNonZeroAt: null, alertSentAt: null,
+        lastCount: 0, zeroStreak: 0, lastNonZeroAt: null,
       };
     }
     this._loadHealth();
@@ -55,48 +51,6 @@ export class Scheduler {
     try {
       writeFileSync(HEALTH_FILE, JSON.stringify(this.scraperHealth, null, 2));
     } catch (_) {}
-  }
-
-  async _checkAlerts() {
-    const healthUrl = config.notifications.discord.healthWebhookUrl
-      || config.notifications.discord.webhookUrl;
-    if (!healthUrl) return;
-    const now = Date.now();
-    const suspects = [];
-
-    for (const s of this.scrapers) {
-      const h = this.scraperHealth[s.name];
-      if (!h.lastNonZeroAt) continue;
-      const hadProductsRecently = (now - new Date(h.lastNonZeroAt).getTime()) < RECENT_WINDOW_MS;
-      const isZeroStreaking = h.lastStatus === 'ok' && h.zeroStreak >= ZERO_STREAK_THRESHOLD;
-      const alertCooledDown = !h.alertSentAt || (now - new Date(h.alertSentAt).getTime()) > ALERT_COOLDOWN_MS;
-
-      if (hadProductsRecently && isZeroStreaking && alertCooledDown) {
-        suspects.push({ name: s.name, zeroStreak: h.zeroStreak, lastNonZeroAt: h.lastNonZeroAt });
-        h.alertSentAt = new Date().toISOString();
-      }
-    }
-
-    if (!suspects.length) return;
-
-    const lines = suspects.map((s) => {
-      const ago = Math.round((now - new Date(s.lastNonZeroAt).getTime()) / 60000);
-      return `• **${s.name}** — 0 produit depuis ${s.zeroStreak} cycles (dernier succès il y a ${ago} min)`;
-    }).join('\n');
-
-    try {
-      await axios.post(healthUrl, {
-        embeds: [{
-          title: '⚠️ Alerte maintenance scrapers',
-          description: `Les scrapers suivants retournent 0 produit alors qu'ils en avaient récemment :\n\n${lines}\n\nVérifiez la page Santé du dashboard.`,
-          color: 0xf5a623,
-          timestamp: new Date().toISOString(),
-        }],
-      });
-      log.warn({ suspects: suspects.map((s) => s.name) }, 'Alerte maintenance envoyée sur Discord');
-    } catch (err) {
-      log.error({ err: err.message }, 'Impossible d\'envoyer l\'alerte maintenance');
-    }
   }
 
   async runCycle({ force = false } = {}) {
@@ -155,7 +109,6 @@ export class Scheduler {
         await notifier.notify(allEvents);
       }
 
-      await this._checkAlerts();
       this._saveHealth();
     } finally {
       this.stats.lastRunAt = new Date().toISOString();
