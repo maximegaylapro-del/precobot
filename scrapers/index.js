@@ -6,6 +6,7 @@
 //   2. L'importer ici et l'ajouter au tableau ci-dessous
 // ============================================================================
 import { config } from '../config.js';
+import { getOverride } from '../services/scraperState.js';
 import ParkageScraper from './parkage.js';
 import CardOmatScraper from './cardomat.js';
 import CardAdvantageScraper from './cardadvantage.js';
@@ -51,14 +52,31 @@ const ALL_SCRAPERS = () => [
   // new PhilibertScraper(),
 ];
 
+/**
+ * Détermine si un scraper doit être actif : l'override manuel (dashboard)
+ * prime sur la config par défaut DISABLED_SCRAPERS.
+ * @param {string} name
+ */
+function isEnabled(name) {
+  const override = getOverride(name);
+  if (override !== undefined) return override;
+  return !config.filters.disabledScrapers.includes(name);
+}
+
+/**
+ * Retourne TOUS les scrapers (activés et désactivés), avec la propriété
+ * `enabled` correctement positionnée. Le scheduler ne lance que ceux activés,
+ * mais garde les autres pour permettre un toggle live via le dashboard.
+ */
 export function buildScrapers() {
-  const disabled = config.filters.disabledScrapers;
-  return ALL_SCRAPERS().filter((s) => !disabled.includes(s.name));
+  return ALL_SCRAPERS().map((s) => {
+    s.enabled = isEnabled(s.name);
+    return s;
+  });
 }
 
 export function getDisabledScrapers() {
-  const disabled = config.filters.disabledScrapers;
   return ALL_SCRAPERS()
-    .filter((s) => disabled.includes(s.name))
+    .filter((s) => !isEnabled(s.name))
     .map((s) => ({ name: s.name, baseUrl: s.baseUrl, urls: s.urls }));
 }

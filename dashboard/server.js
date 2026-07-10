@@ -58,6 +58,17 @@ export async function startDashboard(scheduler) {
     res.json(getDisabledScrapers());
   });
 
+  app.post('/api/scrapers/:name/toggle', (req, res) => {
+    const { name } = req.params;
+    const { enabled } = req.body ?? {};
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: 'Champ "enabled" (boolean) requis' });
+    }
+    const ok = scheduler.setEnabled(name, enabled);
+    if (!ok) return res.status(404).json({ error: `Scraper inconnu : ${name}` });
+    res.json({ ok: true, name, enabled });
+  });
+
   app.delete('/api/products', async (_req, res) => {
     try {
       await storage.clearAll();

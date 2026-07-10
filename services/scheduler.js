@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { child } from './logger.js';
 import * as detection from './detection.js';
 import * as notifier from './notifier.js';
+import { setOverride } from './scraperState.js';
 
 const log = child('scheduler');
 
@@ -132,6 +133,21 @@ export class Scheduler {
   stop() {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+  }
+
+  /**
+   * Active/désactive un scraper en live et persiste le choix.
+   * @param {string} name
+   * @param {boolean} enabled
+   * @returns {boolean} true si le scraper existe et a été modifié
+   */
+  setEnabled(name, enabled) {
+    const scraper = this.scrapers.find((s) => s.name === name);
+    if (!scraper) return false;
+    scraper.enabled = enabled;
+    setOverride(name, enabled);
+    log.info({ scraper: name, enabled }, enabled ? '▶️  Scraper activé' : '⏸️  Scraper désactivé');
+    return true;
   }
 
   getStats() {

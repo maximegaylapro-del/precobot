@@ -55,6 +55,22 @@
     .scraper-card:hover { border-color: #34394f; }
     .scraper-card.suspect { border-color: rgba(245,166,35,0.4); }
     .scraper-card.suspect .scraper-header { background: rgba(245,166,35,0.04); }
+    .scraper-card.disabled { opacity: 0.55; }
+
+    /* Toggle switch */
+    .toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle .track {
+      position: absolute; inset: 0; cursor: pointer; background: var(--border);
+      border-radius: 22px; transition: background 0.2s;
+    }
+    .toggle .track::before {
+      content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: transform 0.2s;
+    }
+    .toggle input:checked + .track { background: var(--ok); }
+    .toggle input:checked + .track::before { transform: translateX(18px); }
+    .toggle input:disabled + .track { cursor: wait; opacity: 0.5; }
 
     /* ── Alert banner ── */
     .alert-banner {
@@ -68,7 +84,7 @@
     .alert-list li { font-size: 0.82rem; color: var(--text); }
     .alert-list li span { color: var(--muted); }
     .scraper-header {
-      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
       align-items: center; padding: 0.9rem 1.2rem;
       cursor: pointer; user-select: none; gap: 1rem;
     }
@@ -108,7 +124,7 @@
 
     /* Table header */
     .table-header {
-      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
       padding: 0.5rem 1.2rem; gap: 1rem; margin-bottom: 0.4rem;
     }
     .table-header span { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -154,6 +170,7 @@
       <span>Produits</span>
       <span>Échecs consécutifs</span>
       <span>Dernier succès</span>
+      <span style="text-align:right">Actif</span>
     </div>
     <div class="scraper-list" id="list"></div>
 
@@ -182,6 +199,26 @@
     function toggleCard(id) {
       const el = document.getElementById('sc-' + id);
       openState[id] = el.classList.toggle('open');
+    }
+
+    async function toggleScraper(name, input) {
+      const enabled = input.checked;
+      input.disabled = true;
+      try {
+        const res = await fetch(`/api/scrapers/${encodeURIComponent(name)}/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled }),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        // Reflète immédiatement l'état visuel de la carte
+        document.getElementById('sc-' + name)?.classList.toggle('disabled', !enabled);
+      } catch (err) {
+        input.checked = !enabled; // rollback
+        alert('Échec du changement pour ' + name + ' : ' + err.message);
+      } finally {
+        input.disabled = false;
+      }
     }
 
     async function load() {
@@ -247,8 +284,14 @@
               ? `<span class="badge error">Erreur</span>`
               : `<span class="badge pending">En attente</span>`;
 
+        const toggleHtml = `
+          <label class="toggle" onclick="event.stopPropagation()" title="${s.enabled ? 'Désactiver' : 'Activer'} ${escapeHtml(s.name)}">
+            <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleScraper('${escapeHtml(s.name)}', this)">
+            <span class="track"></span>
+          </label>`;
+
         return `
-          <div class="scraper-card ${isOpen ? 'open' : ''} ${s.suspect ? 'suspect' : ''}" id="sc-${s.name}">
+          <div class="scraper-card ${isOpen ? 'open' : ''} ${s.suspect ? 'suspect' : ''} ${s.enabled ? '' : 'disabled'}" id="sc-${s.name}">
             <div class="scraper-header" onclick="toggleCard('${s.name}')">
               <div class="scraper-name">
                 <span class="dot ${status}"></span>
@@ -259,6 +302,7 @@
               <div class="col-val">${s.lastCount ?? 0}</div>
               <div class="col-val">${failBadge}</div>
               <div class="col-val" style="color:var(--muted);font-size:0.82rem">${lastOkText}</div>
+              <div style="text-align:right">${toggleHtml}</div>
             </div>
             <div class="scraper-body">
               ${s.lastError ? `<div class="err-msg" style="margin-bottom:0.6rem">⚠️ ${escapeHtml(s.lastError)}</div>` : ''}
