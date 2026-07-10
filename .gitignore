@@ -9,3 +9,6 @@ data/puppeteer-profile/
 coverage/
 .vscode/
 .idea/
+.claude/
+data/scraper-health.json
+data/scraper-state.json
