@@ -98,12 +98,18 @@ export function inferStatus(product) {
  * retourne les événements notifiables.
  *
  * @param {object[]} rawProducts
- * @param {{ force?: boolean }} opts
+ * @param {{ force?: boolean, site?: string }} opts
  *   force=true : réémet les notifs pour TOUS les produits preorder/in_stock
  *                (utilisé par scan:once pour forcer un re-envoi complet)
+ *   site       : nom du scraper — utilisé pour taguer les produits et permettre
+ *                la réconciliation des produits disparus (voir scheduler).
+ * @returns {Promise<{ events: object[], seenIds: string[] }>}
+ *   seenIds : ids des produits toujours présents sur la page ce cycle
+ *             (ont passé le filtre), quel que soit leur statut.
  */
-export async function processBatch(rawProducts, { force = false } = {}) {
+export async function processBatch(rawProducts, { force = false, site = null } = {}) {
   const events = [];
+  const seenIds = [];
 
   for (const raw of rawProducts) {
     if (!raw?.id || !raw?.title || !raw?.url) {
@@ -129,9 +135,10 @@ export async function processBatch(rawProducts, { force = false } = {}) {
       if (!isOnePieceProduct(raw)) continue;
     }
 
-    const product = { ...raw, status: inferStatus(raw), lang: raw.lang ?? detectLang(raw.title) };
+    const product = { ...raw, site: raw.site ?? site, status: inferStatus(raw), lang: raw.lang ?? detectLang(raw.title) };
 
     const result = await storage.upsert(product);
+    seenIds.push(product.id);
 
     // Produits épuisés : stockés pour le dashboard mais pas de notif.
     if (product.status === STATUS.OUT_OF_STOCK) continue;
@@ -171,7 +178,7 @@ export async function processBatch(rawProducts, { force = false } = {}) {
   if (events.length > 0) {
     log.info({ count: events.length, force }, 'Événements détectés');
   }
-  return events;
+  return { events, seenIds };
 }
 
 export { STATUS };

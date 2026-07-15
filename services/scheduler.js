@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { child } from './logger.js';
 import * as detection from './detection.js';
 import * as notifier from './notifier.js';
+import * as storage from './storage.js';
 import { setOverride } from './scraperState.js';
 
 const log = child('scheduler');
@@ -85,7 +86,11 @@ export class Scheduler {
                 h.zeroStreak++;
               }
               if (!rawProducts.length) return [];
-              const events = await detection.processBatch(rawProducts, { force });
+              const { events, seenIds } = await detection.processBatch(rawProducts, { force, site: scraper.name });
+              // Réconciliation : les produits connus de ce site qui ne sont plus
+              // sur la page basculent en rupture (sinon ils restent "Disponibles"
+              // indéfiniment). On ne le fait qu'après un scrape réussi non vide.
+              await storage.markAbsentOutOfStock(scraper.name, seenIds);
               return events;
             } catch (err) {
               h.lastStatus = 'error';

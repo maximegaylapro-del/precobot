@@ -154,6 +154,36 @@ export async function clearAll() {
   });
 }
 
+/**
+ * Réconciliation : après un scrape réussi d'un site, marque en `out_of_stock`
+ * tout produit connu de ce site qui n'est plus présent sur la page
+ * (donc absent de `seenIds`). Gère le cas où un produit disparaît de la page
+ * au lieu de passer explicitement en rupture — sinon il resterait à jamais
+ * dans la section "Disponibles" du dashboard.
+ *
+ * @param {string} site       nom du scraper (== product.site)
+ * @param {Iterable<string>} seenIds  ids vus lors de ce cycle
+ * @returns {Promise<number>} nombre de produits basculés en rupture
+ */
+export async function markAbsentOutOfStock(site, seenIds) {
+  return withLock(async () => {
+    const seen = new Set(seenIds);
+    let changed = 0;
+    for (const [id, p] of Object.entries(cache.products)) {
+      if (p.site !== site) continue;
+      if (seen.has(id)) continue;
+      if (p.status === 'out_of_stock') continue;
+      p.status = 'out_of_stock';
+      changed++;
+    }
+    if (changed > 0) {
+      await persist();
+      log.info({ site, changed }, 'Produits disparus basculés en rupture');
+    }
+    return changed;
+  });
+}
+
 export async function purgeStale(maxAgeDays = 30) {
   return withLock(async () => {
     const cutoff = Date.now() - maxAgeDays * 24 * 3600 * 1000;
