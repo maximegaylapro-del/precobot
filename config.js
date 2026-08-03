@@ -61,6 +61,8 @@ export const config = {
     intervalSeconds: parseInt10(process.env.SCAN_INTERVAL_SECONDS, 180),
     maxConcurrent: parseInt10(process.env.MAX_CONCURRENT_SCRAPERS, 2),
     requestTimeoutMs: parseInt10(process.env.REQUEST_TIMEOUT_MS, 30000),
+    // Pause entre deux pages d'un même site (anti-429). 0 = pas de pause.
+    requestDelayMs: parseInt10(process.env.REQUEST_DELAY_MS, 800),
     headless: parseBool(process.env.HEADLESS, true),
     proxyUrl: process.env.PROXY_URL || null,
     activeHours: parseActiveHours(process.env.SCAN_ACTIVE_HOURS),

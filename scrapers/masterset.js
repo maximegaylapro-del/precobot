@@ -34,6 +34,10 @@ export default class MastersetScraper extends BaseScraper {
       let firstPageRaw = null;
       for (let page = 1; page <= MAX_PAGES; page++) {
         const target = `${url}${url.includes('?') ? '&' : '?'}page=${page}`;
+        // Pause entre les pages (anti-429), cf. BaseScraper.run()
+        if (page > 1 && config.scan.requestDelayMs > 0) {
+          await new Promise((r) => setTimeout(r, config.scan.requestDelayMs));
+        }
         let attempt = 1;
         const maxAttempts = 3;
         let products = null;

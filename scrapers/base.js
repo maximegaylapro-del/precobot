@@ -192,6 +192,11 @@ export class BaseScraper {
       for (let page = 1; page <= this.maxPages; page++) {
         const target = page === 1 ? url : this.pageUrl(url, page);
         if (!target) break;
+        // Petite pause entre les pages d'un même site : plusieurs boutiques
+        // Shopify renvoient 429 quand les requêtes arrivent en rafale.
+        if (page > 1 && config.scan.requestDelayMs > 0) {
+          await new Promise((r) => setTimeout(r, config.scan.requestDelayMs));
+        }
         try {
           this.lastRawCount = null;
           const items = await this._runOne(target);
@@ -205,6 +210,12 @@ export class BaseScraper {
           // renvoient en boucle une page "aucun résultat" au lieu d'un 404.
           else if (this.lastRawCount < firstPageRaw) break;
         } catch (err) {
+          // Un 404 sur une page > 1 est la fin normale de la pagination, pas une
+          // panne : inutile de polluer les logs et le compteur d'erreurs.
+          if (page > 1 && err.response?.status === 404) {
+            this.log.debug({ url: target }, 'Fin de pagination (404)');
+            break;
+          }
           this.log.error({ url: target, err: err.message }, 'Scrape échoué');
           if (page === 1) { failedUrls++; lastError = err; }
           break;
@@ -248,8 +259,14 @@ export class BaseScraper {
       const httpStatus = err.response?.status;
       if (httpStatus === 404 || httpStatus === 410) throw err;
       if (attempt < maxAttempts) {
-        const backoff = 1000 * Math.pow(2, attempt); // 2s, 4s
-        this.log.warn({ url, attempt, err: err.message }, `Retry dans ${backoff}ms`);
+        // 429 (trop de requêtes) : les 2s/4s habituels ne suffisent pas, la
+        // boutique nous refuse encore. On respecte Retry-After s'il est fourni,
+        // sinon on attend beaucoup plus longtemps.
+        const retryAfterSec = parseInt(err.response?.headers?.['retry-after'], 10);
+        const backoff = httpStatus === 429
+          ? Math.min(60000, (Number.isFinite(retryAfterSec) ? retryAfterSec * 1000 : 0) || 8000 * attempt)
+          : 1000 * Math.pow(2, attempt); // 2s, 4s
+        this.log.warn({ url, attempt, status: httpStatus, err: err.message }, `Retry dans ${backoff}ms`);
         await new Promise((r) => setTimeout(r, backoff));
         return this._runOne(url, attempt + 1);
       }
