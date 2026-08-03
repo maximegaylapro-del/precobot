@@ -69,6 +69,21 @@ export class Scheduler {
     try {
       const jobs = this.scrapers
         .filter((s) => s.enabled)
+        // Scrapers à cadence réduite (anti-bot) : on saute le cycle si le
+        // dernier passage est trop récent. Un scan forcé ignore la contrainte.
+        .filter((s) => {
+          if (force || !s.minIntervalMs) return true;
+          const h = this.scraperHealth[s.name];
+          const last = Math.max(
+            h.lastOkAt ? Date.parse(h.lastOkAt) : 0,
+            h.lastErrorAt ? Date.parse(h.lastErrorAt) : 0,
+          );
+          if (last && Date.now() - last < s.minIntervalMs) {
+            log.debug({ scraper: s.name }, 'Cadence réduite — cycle sauté');
+            return false;
+          }
+          return true;
+        })
         .map((scraper) =>
           this.limit(async () => {
             const h = this.scraperHealth[scraper.name];

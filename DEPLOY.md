@@ -112,3 +112,18 @@ sudo apt update && sudo apt install --only-upgrade ca-certificates
 pm2 set precobot:NODE_EXTRA_CA_CERTS /etc/ssl/certs/ca-certificates.crt
 pm2 restart precobot --update-env
 ```
+
+## Panne type : « sélecteur absent » / HTTP 403 sur oupi.eu
+
+oupi.eu est derrière Cloudflare, qui finit par renvoyer un `403 Request forbidden
+by administrative rules` à l'IP du VPS (IP de datacenter + requêtes toutes les
+3 min en continu). Ce n'est pas un blocage définitif : ça se débloque tout seul
+au bout d'un moment.
+
+Le code l'encaisse : message explicite `page inaccessible (HTTP 403)`, retry
+espacé (8s puis 16s), et le scraper ne repasse au maximum que toutes les 10 min
+(`minIntervalMs` dans `scrapers/oupi.js`). Si les 403 persistent malgré tout :
+
+- augmenter `minIntervalMs` (20-30 min), ou
+- désactiver le scraper depuis `/health.html`, ou
+- faire sortir le bot par un proxy résidentiel via `PROXY_URL` dans `.env`.

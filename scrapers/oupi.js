@@ -29,6 +29,9 @@ export default class OupiScraper extends BaseScraper {
       urls: opts.urls || [
         'https://oupi.eu/fr/413-precommande-one-piece',
       ],
+      // Cloudflare finit par renvoyer des 403 à l'IP du VPS quand on repasse
+      // toutes les 3 min en continu : un passage toutes les 10 min suffit.
+      minIntervalMs: 10 * 60 * 1000,
       ...opts,
     });
   }

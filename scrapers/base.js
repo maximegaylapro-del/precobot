@@ -104,6 +104,10 @@ export class BaseScraper {
     // renseigner this.lastRawCount dans parse() (nb de cartes AVANT filtrage),
     // sinon on ne sait pas distinguer « page vide » de « page sans cible ».
     this.maxPages = opts.maxPages || 1;
+    // Intervalle minimum entre deux passages sur ce site (0 = à chaque cycle).
+    // Utile pour les boutiques derrière un anti-bot qui finit par bloquer l'IP
+    // à force de requêtes rapprochées.
+    this.minIntervalMs = opts.minIntervalMs || 0;
     this.lastRawCount = null;
     this.log = child(`scraper:${this.name}`);
   }
@@ -149,10 +153,20 @@ export class BaseScraper {
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'fr-FR,fr;q=0.9' });
     await page.setViewport({ width: 1366, height: 900 });
     try {
-      await page.goto(url, {
+      const response = await page.goto(url, {
         waitUntil: this.waitUntil,
         timeout: config.scan.requestTimeoutMs,
       });
+      // Blocage anti-bot (oupi.eu : Cloudflare renvoie par moments un 403
+      // "Request forbidden by administrative rules" à l'IP du VPS). On veut un
+      // retry très espacé, pas 3 tentatives rapprochées qui aggravent le
+      // blocage — d'où httpStatus, lu par _runOne pour choisir le backoff.
+      const status = response?.status();
+      if (status && status >= 400) {
+        const err = new Error(`page inaccessible (HTTP ${status})`);
+        err.httpStatus = status;
+        throw err;
+      }
       if (this.waitSelector) {
         const seen = () => page.waitForSelector(this.waitSelector, { timeout: 15000 })
           .then(() => true).catch(() => false);
@@ -256,14 +270,15 @@ export class BaseScraper {
     } catch (err) {
       // 404/410 : page inexistante (fin de pagination le plus souvent) — inutile
       // de retenter, la réponse ne changera pas.
-      const httpStatus = err.response?.status;
+      const httpStatus = err.response?.status ?? err.httpStatus;
       if (httpStatus === 404 || httpStatus === 410) throw err;
       if (attempt < maxAttempts) {
-        // 429 (trop de requêtes) : les 2s/4s habituels ne suffisent pas, la
-        // boutique nous refuse encore. On respecte Retry-After s'il est fourni,
-        // sinon on attend beaucoup plus longtemps.
+        // 429 (trop de requêtes) et 403 (blocage anti-bot) : les 2s/4s habituels
+        // ne suffisent pas, la boutique nous refuse encore. On respecte
+        // Retry-After s'il est fourni, sinon on attend beaucoup plus longtemps.
         const retryAfterSec = parseInt(err.response?.headers?.['retry-after'], 10);
-        const backoff = httpStatus === 429
+        const throttled = httpStatus === 429 || httpStatus === 403;
+        const backoff = throttled
           ? Math.min(60000, (Number.isFinite(retryAfterSec) ? retryAfterSec * 1000 : 0) || 8000 * attempt)
           : 1000 * Math.pow(2, attempt); // 2s, 4s
         this.log.warn({ url, attempt, status: httpStatus, err: err.message }, `Retry dans ${backoff}ms`);
