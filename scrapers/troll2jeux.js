@@ -14,11 +14,10 @@
 //
 // Le site retourne 403 aux UA génériques. On simule un navigateur complet.
 // ============================================================================
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { config } from '../config.js';
 import { matchesAny } from '../services/matcher.js';
-import { BaseScraper } from './base.js';
+import { BaseScraper, httpGet } from './base.js';
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -41,7 +40,7 @@ export default class Troll2JeuxScraper extends BaseScraper {
   // Surcharge : headers navigateur complets pour éviter le 403
   async _fetchPage(url) {
     const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-    const { data } = await axios.get(url, {
+    const { data } = await httpGet(url, {
       timeout: config.scan.requestTimeoutMs,
       headers: {
         'User-Agent': ua,

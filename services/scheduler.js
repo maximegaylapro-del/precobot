@@ -14,9 +14,9 @@ import { setOverride } from './scraperState.js';
 const log = child('scheduler');
 
 const HEALTH_FILE = join(config.dataDir, 'scraper-health.json');
-// Un scraper est "suspect" seulement s'il avait des produits dans les 7 derniers jours
+// Un scraper est "suspect" s'il enchaîne les cycles à 0 produit alors qu'il en a
+// déjà remonté par le passé (cf. getHealth).
 const ZERO_STREAK_THRESHOLD = 10;
-const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class Scheduler {
   constructor(scrapers) {
@@ -174,15 +174,23 @@ export class Scheduler {
     const now = Date.now();
     return this.scrapers.map((s) => {
       const h = this.scraperHealth[s.name];
+      // Suspect = scrape "ok" mais 0 produit sur une longue série, alors que le
+      // scraper en remontait avant. La fenêtre de 7 jours servait à ne pas
+      // signaler un site jamais alimenté ; elle faisait aussi *disparaître*
+      // l'alerte au bout d'une semaine — mystic-ambre est resté muet 54 jours
+      // sans être signalé. On garde donc le flag tant que le scraper a déjà
+      // produit quelque chose un jour.
       const suspect = h.lastStatus === 'ok'
         && h.zeroStreak >= ZERO_STREAK_THRESHOLD
-        && h.lastNonZeroAt
-        && (now - new Date(h.lastNonZeroAt).getTime()) < RECENT_WINDOW_MS;
+        && Boolean(h.lastNonZeroAt);
+      const mutedSinceMs = h.lastNonZeroAt ? now - new Date(h.lastNonZeroAt).getTime() : null;
       return {
         name: s.name,
         enabled: s.enabled,
         urls: s.urls,
         suspect,
+        // Nb de jours sans le moindre produit — visible sur la page Santé.
+        mutedDays: mutedSinceMs === null ? null : Math.floor(mutedSinceMs / 86400000),
         ...h,
       };
     });

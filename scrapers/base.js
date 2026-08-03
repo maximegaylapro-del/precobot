@@ -9,6 +9,7 @@
 // avoir la forme :
 //   { id, title, price, url, image?, status?, availability?, description?, category? }
 // ============================================================================
+import https from 'https';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import puppeteer from 'puppeteer-extra';
@@ -17,6 +18,44 @@ import { config } from '../config.js';
 import { child } from '../services/logger.js';
 
 puppeteer.use(StealthPlugin());
+
+const tlsLog = child('http');
+
+// Erreurs de validation de chaîne TLS : le certificat du site est signé par une
+// autorité absente du magasin de Node. Cas réel : mystic-ambre.fr a renouvelé
+// son certificat le 09/06/2026 vers la racine Let's Encrypt « ISRG Root YR »,
+// trop récente pour le bundle de Node 22 → toutes les requêtes échouaient et le
+// scraper renvoyait 0 produit pendant 54 jours.
+const TLS_CHAIN_ERRORS = new Set([
+  'UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
+  'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'SELF_SIGNED_CERT_IN_CHAIN',
+  'CERT_UNTRUSTED',
+]);
+
+const insecureAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true });
+
+/**
+ * GET HTTP avec repli en cas de chaîne TLS non validable.
+ *
+ * La vérification reste active par défaut ; si (et seulement si) elle échoue on
+ * retente une fois sans vérification, avec un WARN. On ne lit que des pages
+ * catalogue publiques, aucun identifiant ne transite : mieux vaut un scraper qui
+ * fonctionne avec un avertissement qu'une boutique muette. Poser
+ * NODE_EXTRA_CA_CERTS sur la racine manquante supprime le repli.
+ *
+ * @param {string} url
+ * @param {import('axios').AxiosRequestConfig} options
+ */
+export async function httpGet(url, options = {}) {
+  try {
+    return await axios.get(url, options);
+  } catch (err) {
+    if (!TLS_CHAIN_ERRORS.has(err.code)) throw err;
+    tlsLog.warn({ url, code: err.code }, 'Chaîne TLS non validable — nouvelle tentative sans vérification');
+    return axios.get(url, { ...options, httpsAgent: insecureAgent });
+  }
+}
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -90,7 +129,7 @@ export class BaseScraper {
   }
 
   async fetchStatic(url) {
-    const { data } = await axios.get(url, {
+    const { data } = await httpGet(url, {
       timeout: config.scan.requestTimeoutMs,
       headers: {
         'User-Agent': randomUA(),

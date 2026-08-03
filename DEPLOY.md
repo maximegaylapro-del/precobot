@@ -80,3 +80,35 @@ pm2 save                    # sauver la config pm2 (après changement)
 Ignorés via `.gitignore`, à ne pas committer : `.env`, `.claude/`, `logs/*.log`,
 `data/products.json`, `data/scraper-health.json`, `data/scraper-state.json`,
 `data/puppeteer-profile/`.
+
+## Panne type : un scraper "ok" qui remonte 0 produit
+
+Symptôme : sur `/health.html` le scraper est vert (`ok`, 0 erreur) mais `lastCount = 0`
+et `zeroStreak` grimpe ; côté produits, ses fiches restent figées avec leur ancien
+statut (elles ne passent pas en rupture, car la réconciliation est volontairement
+sautée sur un scrape vide).
+
+Cas réel (mystic-ambre, 09/06 → 03/08/2026) : le site a renouvelé son certificat
+vers la racine Let's Encrypt **ISRG Root YR**, absente du magasin de Node 22 comme
+du paquet `ca-certificates` d'Ubuntu 25.04 → chaque requête échouait sur
+`unable to get local issuer certificate`.
+
+Diagnostic :
+
+```bash
+# depuis le VPS
+curl -sv -m 20 -o /dev/null https://www.<site>.fr/ 2>&1 | grep -iE "SSL|HTTP/|refused|timed"
+echo | openssl s_client -connect www.<site>.fr:443 -servername www.<site>.fr 2>&1 | grep "Verify return code"
+```
+
+Le code encaisse désormais ce cas : `httpGet()` (dans `scrapers/base.js`) retente
+une fois sans vérification TLS en loggant un `WARN` « Chaîne TLS non validable ».
+Le scraper continue donc de fonctionner. Pour rétablir une vérification complète,
+fournir la racine manquante à Node :
+
+```bash
+sudo apt update && sudo apt install --only-upgrade ca-certificates
+# Node ignore le magasin système par défaut : le lui désigner explicitement
+pm2 set precobot:NODE_EXTRA_CA_CERTS /etc/ssl/certs/ca-certificates.crt
+pm2 restart precobot --update-env
+```

@@ -237,11 +237,11 @@
           <div class="alert-banner">
             <div class="alert-icon">⚠️</div>
             <div>
-              <div class="alert-title">${suspects.length} scraper${suspects.length > 1 ? 's' : ''} suspect${suspects.length > 1 ? 's' : ''} — 0 produit alors qu'ils en avaient récemment</div>
+              <div class="alert-title">${suspects.length} scraper${suspects.length > 1 ? 's' : ''} suspect${suspects.length > 1 ? 's' : ''} — 0 produit alors qu'ils en remontaient avant</div>
               <ul class="alert-list">
                 ${suspects.map(s => {
-                  const ago = s.lastNonZeroAt ? Math.round((Date.now() - new Date(s.lastNonZeroAt).getTime()) / 60000) : null;
-                  return `<li><strong>${escapeHtml(s.name)}</strong> — ${s.zeroStreak} cycles à 0 produit <span>· dernier succès il y a ${ago ?? '?'} min</span></li>`;
+                  const ago = s.lastNonZeroAt ? timeAgo(s.lastNonZeroAt) : '?';
+                  return `<li><strong>${escapeHtml(s.name)}</strong> — ${s.zeroStreak} cycles à 0 produit <span>· dernier produit ${ago}</span></li>`;
                 }).join('')}
               </ul>
             </div>

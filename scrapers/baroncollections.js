@@ -1,10 +1,9 @@
 // ============================================================================
 // scrapers/baroncollections.js — Scraper Baron Collections (Shopify JSON API)
 // ============================================================================
-import axios from 'axios';
 import { config } from '../config.js';
 import { matchesAny } from '../services/matcher.js';
-import { BaseScraper } from './base.js';
+import { BaseScraper, httpGet } from './base.js';
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -34,7 +33,7 @@ export default class BaronCollectionsScraper extends BaseScraper {
       while (attempt <= maxAttempts) {
         try {
           const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-          const { data } = await axios.get(url, {
+          const { data } = await httpGet(url, {
             timeout: config.scan.requestTimeoutMs,
             headers: {
               'User-Agent': ua,
