@@ -26,8 +26,15 @@ export default class LudotrotterScraper extends BaseScraper {
       urls: opts.urls || [
         'https://ludotrotter.fr/categorie-produit/magasin/cartes/one-piece/',
       ],
+      // Catégorie paginée (12 produits/page) : sans ça seule la page 1 était lue.
+      maxPages: 10,
       ...opts,
     });
+  }
+
+  /** WooCommerce : .../one-piece/page/2/ */
+  pageUrl(url, page) {
+    return `${url.replace(/\/$/, '')}/page/${page}/`;
   }
 
   async parse({ $ }) {
@@ -36,7 +43,10 @@ export default class LudotrotterScraper extends BaseScraper {
       ? config.filters.targetKeywords
       : config.filters.onepieceKeywords;
 
-    $('li.product').each((_, el) => {
+    const cards = $('li.product');
+    this.lastRawCount = cards.length;
+
+    cards.each((_, el) => {
       const $el = $(el);
 
       const title = $el.find('h2.woocommerce-loop-product__title').first().text().trim();

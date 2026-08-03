@@ -27,37 +27,55 @@ export default class MastersetScraper extends BaseScraper {
   async run() {
     if (!this.enabled || !this.urls.length) return [];
     const all = [];
+    let failedUrls = 0;
+    let lastError = null;
+    const MAX_PAGES = 10; // la collection multi-tcg dépasse 500 produits
 
     for (const url of this.urls) {
-      let attempt = 1;
-      const maxAttempts = 3;
-      while (attempt <= maxAttempts) {
-        try {
-          const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-          const { data } = await axios.get(url, {
-            timeout: config.scan.requestTimeoutMs,
-            headers: {
-              'User-Agent': ua,
-              Accept: 'application/json',
-              'Accept-Language': 'fr-FR,fr;q=0.9',
-            },
-          });
-          const items = this._parseProducts(data?.products || []);
-          this.log.info({ url, count: items.length }, 'Scrape OK');
-          all.push(...items);
-          break;
-        } catch (err) {
-          if (attempt < maxAttempts) {
-            const backoff = 1000 * Math.pow(2, attempt);
-            this.log.warn({ url, attempt, err: err.message }, `Retry dans ${backoff}ms`);
-            await new Promise((r) => setTimeout(r, backoff));
-            attempt++;
-          } else {
-            this.log.error({ url, err: err.message }, 'Scrape échoué');
+      let firstPageRaw = null;
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const target = `${url}${url.includes('?') ? '&' : '?'}page=${page}`;
+        let attempt = 1;
+        const maxAttempts = 3;
+        let products = null;
+        while (attempt <= maxAttempts) {
+          try {
+            const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+            const { data } = await axios.get(target, {
+              timeout: config.scan.requestTimeoutMs,
+              headers: {
+                'User-Agent': ua,
+                Accept: 'application/json',
+                'Accept-Language': 'fr-FR,fr;q=0.9',
+              },
+            });
+            products = data?.products || [];
+            const items = this._parseProducts(products);
+            this.log.info({ url: target, count: items.length, raw: products.length }, 'Scrape OK');
+            all.push(...items);
             break;
+          } catch (err) {
+            if (attempt < maxAttempts) {
+              const backoff = 1000 * Math.pow(2, attempt);
+              this.log.warn({ url: target, attempt, err: err.message }, `Retry dans ${backoff}ms`);
+              await new Promise((r) => setTimeout(r, backoff));
+              attempt++;
+            } else {
+              this.log.error({ url: target, err: err.message }, 'Scrape échoué');
+              if (page === 1) { failedUrls++; lastError = err; }
+              break;
+            }
           }
         }
+        // page vide, incomplète (= dernière) ou en échec → fin de la pagination
+        if (!products || products.length === 0) break;
+        if (page === 1) firstPageRaw = products.length;
+        else if (products.length < firstPageRaw) break;
       }
+    }
+
+    if (failedUrls === this.urls.length && lastError) {
+      throw new Error(`toutes les URLs ont échoué (${lastError.message})`);
     }
 
     const seen = new Set();

@@ -25,10 +25,17 @@ export default class ComptoirDesEcoliersScraper extends BaseScraper {
       mode: 'static',
       urls: opts.urls || [
         'https://comptoirdesecoliers.com/index.php/product-category/cartes-a-collectionner-2/carte-one-piece/',
-        'https://comptoirdesecoliers.com/index.php/product-category/cartes-a-collectionner-2/carte-one-piece/page/2/',
       ],
+      // 80 produits / 5 pages, triés alphabétiquement : les displays OP18/OP19
+      // tombent page 3+. Seules les pages 1-2 étaient lues auparavant.
+      maxPages: 12,
       ...opts,
     });
+  }
+
+  /** WooCommerce : .../carte-one-piece/page/2/ */
+  pageUrl(url, page) {
+    return `${url.replace(/\/$/, '')}/page/${page}/`;
   }
 
   async parse({ $ }) {
@@ -37,7 +44,10 @@ export default class ComptoirDesEcoliersScraper extends BaseScraper {
       ? config.filters.targetKeywords
       : config.filters.onepieceKeywords;
 
-    $('li.product').each((_, el) => {
+    const cards = $('li.product');
+    this.lastRawCount = cards.length;
+
+    cards.each((_, el) => {
       const $el = $(el);
 
       // Titre

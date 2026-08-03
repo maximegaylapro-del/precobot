@@ -60,7 +60,24 @@ export class BaseScraper {
     this.enabled = opts.enabled !== false;
     this.waitSelector = opts.waitSelector || null;
     this.waitUntil = opts.waitUntil || 'domcontentloaded';
+    // Pagination : nombre max de pages suivies par URL de départ (1 = pas de
+    // pagination). Une sous-classe qui pagine doit implémenter pageUrl() ET
+    // renseigner this.lastRawCount dans parse() (nb de cartes AVANT filtrage),
+    // sinon on ne sait pas distinguer « page vide » de « page sans cible ».
+    this.maxPages = opts.maxPages || 1;
+    this.lastRawCount = null;
     this.log = child(`scraper:${this.name}`);
+  }
+
+  /**
+   * URL de la page n (n >= 2) pour une URL de départ. Retourner null désactive
+   * la pagination pour cette URL.
+   * @param {string} _url
+   * @param {number} _page
+   * @returns {string|null}
+   */
+  pageUrl(_url, _page) {
+    return null;
   }
 
   /**
@@ -98,7 +115,18 @@ export class BaseScraper {
         timeout: config.scan.requestTimeoutMs,
       });
       if (this.waitSelector) {
-        await page.waitForSelector(this.waitSelector, { timeout: 15000 }).catch(() => {});
+        const seen = () => page.waitForSelector(this.waitSelector, { timeout: 15000 })
+          .then(() => true).catch(() => false);
+        let found = await seen();
+        if (!found) {
+          // Certaines grilles ne se peuplent qu'au scroll (lazy loading).
+          await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
+          found = await seen();
+        }
+        // Page rendue sans les cartes produit : on échoue explicitement pour
+        // déclencher le retry, au lieu de parser du vide et de conclure
+        // "0 produit" (ce qui ferait basculer tout le site en rupture).
+        if (!found) throw new Error(`sélecteur "${this.waitSelector}" absent après rendu`);
       } else {
         await new Promise((r) => setTimeout(r, 1500));
       }
@@ -117,14 +145,38 @@ export class BaseScraper {
   async run() {
     if (!this.enabled || !this.urls.length) return [];
     const all = [];
+    let failedUrls = 0;
+    let lastError = null;
+
     for (const url of this.urls) {
-      try {
-        const items = await this._runOne(url);
-        this.log.info({ url, count: items.length }, 'Scrape OK');
-        all.push(...items);
-      } catch (err) {
-        this.log.error({ url, err: err.message }, 'Scrape échoué');
+      let firstPageRaw = null;
+      for (let page = 1; page <= this.maxPages; page++) {
+        const target = page === 1 ? url : this.pageUrl(url, page);
+        if (!target) break;
+        try {
+          this.lastRawCount = null;
+          const items = await this._runOne(target);
+          this.log.info({ url: target, count: items.length, raw: this.lastRawCount }, 'Scrape OK');
+          all.push(...items);
+          // Fin de pagination : la page ne contient plus aucune carte produit.
+          // Si le scraper ne renseigne pas lastRawCount, on s'arrête après la 1re page.
+          if (this.lastRawCount === null || this.lastRawCount === 0) break;
+          if (page === 1) firstPageRaw = this.lastRawCount;
+          // Page incomplète = dernière page réelle. Au-delà, certains sites
+          // renvoient en boucle une page "aucun résultat" au lieu d'un 404.
+          else if (this.lastRawCount < firstPageRaw) break;
+        } catch (err) {
+          this.log.error({ url: target, err: err.message }, 'Scrape échoué');
+          if (page === 1) { failedUrls++; lastError = err; }
+          break;
+        }
       }
+    }
+
+    // Toutes les URLs sont tombées → on remonte l'erreur pour que le scraper
+    // soit marqué "error" dans le health, au lieu de passer pour un "ok, 0 produit".
+    if (failedUrls === this.urls.length && lastError) {
+      throw new Error(`toutes les URLs ont échoué (${lastError.message})`);
     }
     // déduplication par id
     const seen = new Set();
@@ -152,6 +204,10 @@ export class BaseScraper {
         return await this.parse({ $, html, url });
       }
     } catch (err) {
+      // 404/410 : page inexistante (fin de pagination le plus souvent) — inutile
+      // de retenter, la réponse ne changera pas.
+      const httpStatus = err.response?.status;
+      if (httpStatus === 404 || httpStatus === 410) throw err;
       if (attempt < maxAttempts) {
         const backoff = 1000 * Math.pow(2, attempt); // 2s, 4s
         this.log.warn({ url, attempt, err: err.message }, `Retry dans ${backoff}ms`);

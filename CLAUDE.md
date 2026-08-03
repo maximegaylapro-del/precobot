@@ -40,12 +40,15 @@ index.js (startup)
 - `base.js` — Abstract base with two fetch modes:
   - **Static** (axios + cheerio): for server-rendered HTML, fast, low RAM
   - **Dynamic** (Puppeteer + stealth plugin): for JS-heavy or anti-bot sites
-- Both modes include retry with exponential backoff (3 attempts, 2s/4s), User-Agent rotation, and per-scraper deduplication by product ID
+- Both modes include retry with exponential backoff (3 attempts, 2s/4s — skipped on 404/410), User-Agent rotation, and per-scraper deduplication by product ID
+- **Pagination**: set `maxPages` in the constructor and implement `pageUrl(url, page)`. The parse method must also set `this.lastRawCount` (number of product cards *before* filtering) — `run()` uses it to stop at the last page (empty page, or fewer cards than page 1)
+- **Failure surfacing**: if every configured URL fails, `run()` throws so the scraper shows up as `error` in the health dashboard. Dynamic mode throws when `waitSelector` never appears (after a scroll retry), instead of parsing an empty page — a silent "0 product" would flip the whole site to out-of-stock
 - `index.js` — Registry: `buildScrapers()` instantiates all enabled scrapers
 - All scrapers return: `{ id, title, price, url, image?, status?, availability?, description?, category? }`
 
 **Detection** (`services/detection.js`)
-- Three-tier filtering: blacklist → keyword filter → status inference
+- Four-tier filtering: blacklist → other-TCG-franchise rejection → keyword filter → status inference
+- Franchise rejection (`OTHER_FRANCHISES`) is required because `TARGET_KEYWORDS` holds generic terms ("anniversary", "best selection vol") that also match Gundam/Digimon/Weiss Schwarz products; a title with an explicit One Piece signal (licence name or OP/EB/PRB set code) is always kept
 - `TARGET_KEYWORDS` (if set) overrides `ONEPIECE_KEYWORDS` entirely
 - Status inference reads product.status, title, availability, description, statusText
 - Events emitted: `new_preorder`, `became_preorder`, `back_in_stock`
@@ -57,6 +60,7 @@ index.js (startup)
 - Tracks `firstSeenAt`, `lastSeenAt`, `notifiedAt` per product
 - `upsert()` returns `{ kind: 'new'|'status'|'seen', product, previousStatus? }`
 - Auto-backs-up and resets corrupted files
+- `markAbsentOutOfStock()` flips products that vanished from a site's page to out-of-stock (only after a successful non-empty scrape); `purgeStale()` runs at the end of each cycle and drops products unseen for `PRODUCT_RETENTION_DAYS` (default 30)
 
 **Matcher** (`services/matcher.js`)
 - Case-insensitive, accent-insensitive, dash/space/underscore-insensitive
@@ -99,6 +103,7 @@ BLACKLIST_KEYWORDS           # Always excluded regardless of other filters
 PREORDER_KEYWORDS            # Terms used for preorder status detection
 HEADLESS                     # Puppeteer headless mode (true/false)
 PROXY_URL                    # Optional proxy for all requests
+PRODUCT_RETENTION_DAYS       # Purge products unseen for N days (default 30, 0 = never)
 DASHBOARD_ENABLED            # Enable Express UI (default true)
 DASHBOARD_PORT               # Default 3000
 ```

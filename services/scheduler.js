@@ -116,6 +116,12 @@ export class Scheduler {
       }
 
       this._saveHealth();
+
+      // Purge des fiches plus revues depuis retentionDays : sinon le dashboard
+      // affiche encore des produits retirés des boutiques depuis des semaines.
+      if (config.scan.retentionDays > 0) {
+        await storage.purgeStale(config.scan.retentionDays);
+      }
     } finally {
       this.stats.lastRunAt = new Date().toISOString();
       this.running = false;

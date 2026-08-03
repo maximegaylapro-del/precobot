@@ -24,8 +24,15 @@ export default class LudisphereScraper extends BaseScraper {
       urls: opts.urls || [
         'https://ludisphere.fr/collections/one-piece-card-game-precommande',
       ],
+      // Collection paginée : sans ça seule la page 1 était lue.
+      maxPages: 10,
       ...opts,
     });
+  }
+
+  /** Shopify : ...collection?page=2 */
+  pageUrl(url, page) {
+    return `${url}${url.includes('?') ? '&' : '?'}page=${page}`;
   }
 
   async parse({ $ }) {
@@ -34,7 +41,10 @@ export default class LudisphereScraper extends BaseScraper {
       ? config.filters.targetKeywords
       : config.filters.onepieceKeywords;
 
-    $('li.grid__item').each((_, el) => {
+    const cards = $('li.grid__item');
+    this.lastRawCount = cards.length;
+
+    cards.each((_, el) => {
       const $el = $(el);
 
       // Titre : div.card__heading.h5 a (section outer, hors overlay)

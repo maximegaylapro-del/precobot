@@ -64,6 +64,9 @@ export const config = {
     headless: parseBool(process.env.HEADLESS, true),
     proxyUrl: process.env.PROXY_URL || null,
     activeHours: parseActiveHours(process.env.SCAN_ACTIVE_HOURS),
+    // Purge des produits plus revus depuis N jours (0 = jamais purger). Évite que
+    // le dashboard garde indéfiniment des fiches disparues des boutiques.
+    retentionDays: parseInt10(process.env.PRODUCT_RETENTION_DAYS, 30),
   },
 
   filters: {
