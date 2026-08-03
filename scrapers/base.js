@@ -240,7 +240,11 @@ export class BaseScraper {
     // Toutes les URLs sont tombées → on remonte l'erreur pour que le scraper
     // soit marqué "error" dans le health, au lieu de passer pour un "ok, 0 produit".
     if (failedUrls === this.urls.length && lastError) {
-      throw new Error(`toutes les URLs ont échoué (${lastError.message})`);
+      const err = new Error(`toutes les URLs ont échoué (${lastError.message})`);
+      // Statut conservé pour que le scheduler reconnaisse un bridage (429/403)
+      // et mette le scraper en pause au lieu de réessayer à chaque cycle.
+      err.httpStatus = lastError.response?.status ?? lastError.httpStatus;
+      throw err;
     }
     // déduplication par id
     const seen = new Set();

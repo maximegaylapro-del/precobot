@@ -127,3 +127,17 @@ espacé (8s puis 16s), et le scraper ne repasse au maximum que toutes les 10 min
 - augmenter `minIntervalMs` (20-30 min), ou
 - désactiver le scraper depuis `/health.html`, ou
 - faire sortir le bot par un proxy résidentiel via `PROXY_URL` dans `.env`.
+
+## Sites qui nous brident (HTTP 429)
+
+Plusieurs boutiques Shopify (masterset, ludisphere, gamesavenue, nevermint,
+baroncollections, cardakuso) renvoient par intermittence un `429 Too Many
+Requests` : l'IP du VPS interroge toutes les 3 min depuis des mois. Ces erreurs
+existent depuis le 07/05/2026 (56 000+ occurrences) mais étaient avalées
+silencieusement avant le 03/08.
+
+Comportement actuel : au premier 429 le site est mis en **pause 10 min**
+(doublée à chaque échec consécutif, plafond 1 h), puis reprise automatique. Le
+dashboard l'affiche `⏸️ Bridé · reprise HH:MM` et ne le compte pas comme erreur.
+Un succès remet tout à zéro. Rien à faire, donc — sauf si un site reste bridé en
+permanence, auquel cas : `minIntervalMs` dans son scraper, ou `PROXY_URL`.

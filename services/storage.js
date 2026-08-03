@@ -167,6 +167,7 @@ export async function clearAll() {
  */
 export async function markAbsentOutOfStock(site, seenIds) {
   return withLock(async () => {
+    if (!cache) return 0; // init() pas encore appelé
     const seen = new Set(seenIds);
     let changed = 0;
     for (const [id, p] of Object.entries(cache.products)) {
@@ -186,6 +187,7 @@ export async function markAbsentOutOfStock(site, seenIds) {
 
 export async function purgeStale(maxAgeDays = 30) {
   return withLock(async () => {
+    if (!cache) return 0; // init() pas encore appelé
     const cutoff = Date.now() - maxAgeDays * 24 * 3600 * 1000;
     let removed = 0;
     for (const [id, p] of Object.entries(cache.products)) {

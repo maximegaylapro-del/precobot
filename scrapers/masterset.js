@@ -78,7 +78,9 @@ export default class MastersetScraper extends BaseScraper {
     }
 
     if (failedUrls === this.urls.length && lastError) {
-      throw new Error(`toutes les URLs ont échoué (${lastError.message})`);
+      const err = new Error(`toutes les URLs ont échoué (${lastError.message})`);
+      err.httpStatus = lastError.response?.status ?? lastError.httpStatus;
+      throw err;
     }
 
     const seen = new Set();

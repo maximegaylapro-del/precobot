@@ -224,9 +224,14 @@
     async function load() {
       const data = await fetch('/api/health').then(r => r.json());
 
+      const now      = Date.now();
+      const isPaused = s => s.throttledUntil && Date.parse(s.throttledUntil) > now;
+
       const total    = data.length;
       const ok       = data.filter(s => s.lastStatus === 'ok' && !s.suspect).length;
-      const errors   = data.filter(s => s.lastStatus === 'error').length;
+      // Un site bridé n'est pas en panne : il reprend tout seul, on ne le compte
+      // pas comme erreur (sinon le compteur reste rouge en permanence).
+      const errors   = data.filter(s => s.lastStatus === 'error' && !isPaused(s)).length;
       const suspects = data.filter(s => s.suspect);
       const pending  = data.filter(s => !s.lastStatus).length;
 
@@ -276,13 +281,19 @@
           ? `<span style="color:var(--text)">${timeAgo(s.lastOkAt)}</span>`
           : `<span style="color:var(--muted)">—</span>`;
 
+        const pausedUntil = s.throttledUntil && new Date(s.throttledUntil) > new Date()
+          ? new Date(s.throttledUntil).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          : null;
+
         const statusBadge = s.suspect
           ? `<span class="badge warn">⚠️ Suspect</span>`
-          : status === 'ok'
-            ? `<span class="badge ok">OK</span>`
-            : status === 'error'
-              ? `<span class="badge error">Erreur</span>`
-              : `<span class="badge pending">En attente</span>`;
+          : pausedUntil
+            ? `<span class="badge warn" title="La boutique nous bride — reprise automatique">⏸️ Bridé · reprise ${pausedUntil}</span>`
+            : status === 'ok'
+              ? `<span class="badge ok">OK</span>`
+              : status === 'error'
+                ? `<span class="badge error">Erreur</span>`
+                : `<span class="badge pending">En attente</span>`;
 
         const toggleHtml = `
           <label class="toggle" onclick="event.stopPropagation()" title="${s.enabled ? 'Désactiver' : 'Activer'} ${escapeHtml(s.name)}">

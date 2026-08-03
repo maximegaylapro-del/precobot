@@ -17,6 +17,10 @@ const HEALTH_FILE = join(config.dataDir, 'scraper-health.json');
 // Un scraper est "suspect" s'il enchaîne les cycles à 0 produit alors qu'il en a
 // déjà remonté par le passé (cf. getHealth).
 const ZERO_STREAK_THRESHOLD = 10;
+// Pause appliquée à un site qui nous bride (429/403), doublée à chaque échec
+// consécutif : 10 min, 20, 40, plafonnée à 1 h.
+const THROTTLE_BASE_PAUSE_MS = 10 * 60 * 1000;
+const THROTTLE_MAX_PAUSE_MS = 60 * 60 * 1000;
 
 export class Scheduler {
   constructor(scrapers) {
@@ -32,6 +36,7 @@ export class Scheduler {
         lastStatus: null, lastOkAt: null, lastErrorAt: null,
         lastError: null, consecutiveFails: 0, totalRuns: 0, totalErrors: 0,
         lastCount: 0, zeroStreak: 0, lastNonZeroAt: null,
+        throttledUntil: null,
       };
     }
     this._loadHealth();
@@ -69,11 +74,19 @@ export class Scheduler {
     try {
       const jobs = this.scrapers
         .filter((s) => s.enabled)
-        // Scrapers à cadence réduite (anti-bot) : on saute le cycle si le
-        // dernier passage est trop récent. Un scan forcé ignore la contrainte.
+        // Cycle sauté si le site est en pause : soit cadence réduite fixe
+        // (anti-bot connu), soit pause automatique après un bridage 429/403.
+        // Un scan forcé ignore les deux.
         .filter((s) => {
-          if (force || !s.minIntervalMs) return true;
+          if (force) return true;
           const h = this.scraperHealth[s.name];
+
+          if (h.throttledUntil && Date.now() < Date.parse(h.throttledUntil)) {
+            log.debug({ scraper: s.name, until: h.throttledUntil }, 'En pause après bridage — cycle sauté');
+            return false;
+          }
+
+          if (!s.minIntervalMs) return true;
           const last = Math.max(
             h.lastOkAt ? Date.parse(h.lastOkAt) : 0,
             h.lastErrorAt ? Date.parse(h.lastErrorAt) : 0,
@@ -93,6 +106,8 @@ export class Scheduler {
               h.lastStatus = 'ok';
               h.lastOkAt = new Date().toISOString();
               h.consecutiveFails = 0;
+              h.throttledUntil = null;
+              h.lastError = null;
               h.lastCount = rawProducts.length;
               if (rawProducts.length > 0) {
                 h.zeroStreak = 0;
@@ -113,6 +128,20 @@ export class Scheduler {
               h.lastError = err.message;
               h.consecutiveFails++;
               h.totalErrors++;
+              // Bridage (429 trop de requêtes / 403 anti-bot) : insister à
+              // chaque cycle ne fait qu'entretenir le blocage. On met le site en
+              // pause, de plus en plus longtemps s'il refuse toujours.
+              if (err.httpStatus === 429 || err.httpStatus === 403) {
+                const pauseMs = Math.min(
+                  THROTTLE_MAX_PAUSE_MS,
+                  THROTTLE_BASE_PAUSE_MS * 2 ** (h.consecutiveFails - 1),
+                );
+                h.throttledUntil = new Date(Date.now() + pauseMs).toISOString();
+                log.warn(
+                  { scraper: scraper.name, status: err.httpStatus, pauseMin: Math.round(pauseMs / 60000) },
+                  'Site bridé — mise en pause',
+                );
+              }
               this.stats.errors++;
               this.stats.lastError = { at: new Date().toISOString(), scraper: scraper.name, msg: err.message };
               log.error({ scraper: scraper.name, err: err.message }, 'Scraper a planté');
