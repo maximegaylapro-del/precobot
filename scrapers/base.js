@@ -109,6 +109,10 @@ export class BaseScraper {
     // à force de requêtes rapprochées.
     this.minIntervalMs = opts.minIntervalMs || 0;
     this.lastRawCount = null;
+    // Renseigné par parse() quand le site indique explicitement s'il reste des
+    // pages (lien "page suivante"). false → run() arrête là, sans aller taper
+    // une page inexistante.
+    this.lastHasNextPage = null;
     this.log = child(`scraper:${this.name}`);
   }
 
@@ -213,12 +217,15 @@ export class BaseScraper {
         }
         try {
           this.lastRawCount = null;
+          this.lastHasNextPage = null;
           const items = await this._runOne(target);
           this.log.info({ url: target, count: items.length, raw: this.lastRawCount }, 'Scrape OK');
           all.push(...items);
           // Fin de pagination : la page ne contient plus aucune carte produit.
           // Si le scraper ne renseigne pas lastRawCount, on s'arrête après la 1re page.
           if (this.lastRawCount === null || this.lastRawCount === 0) break;
+          // Le site dit lui-même qu'il n'y a pas de page suivante.
+          if (this.lastHasNextPage === false) break;
           if (page === 1) firstPageRaw = this.lastRawCount;
           // Page incomplète = dernière page réelle. Au-delà, certains sites
           // renvoient en boucle une page "aucun résultat" au lieu d'un 404.
