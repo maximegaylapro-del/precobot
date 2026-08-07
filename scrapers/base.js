@@ -309,9 +309,21 @@ export class BaseScraper {
     }
   }
 
-  /** Génère un ID stable (site + hash de l'URL normalisée) */
+  /**
+   * Génère un ID stable (site + hash de l'URL normalisée).
+   *
+   * Le hash porte sur la chaîne entière : un base64 tronqué ne couvrait que le
+   * début de l'URL, identique pour tous les produits d'une même boutique
+   * ("https://boutique.fr/produit/…"), donc tous les ids se confondaient et les
+   * produits s'écrasaient mutuellement en base.
+   */
   makeId(urlOrKey) {
     const clean = String(urlOrKey).split('#')[0].split('?')[0];
-    return `${this.name}_${Buffer.from(clean).toString('base64url').slice(0, 32)}`;
+    let hash = 0x811c9dc5; // FNV-1a 32 bits
+    for (let i = 0; i < clean.length; i++) {
+      hash ^= clean.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return `${this.name}_${hash.toString(16)}${clean.length.toString(16)}`;
   }
 }
