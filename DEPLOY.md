@@ -12,7 +12,7 @@ Mémo pour mettre à jour et opérer le bot. À garder à jour.
 | Élément | Valeur |
 |---|---|
 | Hébergeur | OVH |
-| Connexion SSH | `ssh ubuntu@vps-89f09679-vps-ovh-net` |
+| Connexion SSH | `ssh ubuntu@vps-89f09679.vps.ovh.net` |
 | User | `ubuntu` |
 | Dossier du projet | `~/precobot` |
 | Gestionnaire de process | **pm2** |
@@ -42,14 +42,24 @@ git pull origin main
 git stash pop        # (optionnel) ré-applique si nécessaire
 ```
 
-## Accéder au dashboard depuis ton navigateur (local)
+## Accéder au dashboard
 
-Le dashboard écoute sur le port 3000 **du VPS**. Tunnel SSH depuis ta machine :
+Le dashboard écoute sur le port 3000 du VPS, sur toutes les interfaces, et
+**aucun firewall n'est actif** (`ufw` inactive, iptables en ACCEPT) : il est
+donc directement joignable depuis Internet.
+
+- Produits : <http://vps-89f09679.vps.ovh.net:3000/>
+- Santé + toggles : <http://vps-89f09679.vps.ovh.net:3000/health.html>
+
+⚠️ **Il n'y a aucune authentification.** N'importe qui connaissant l'adresse
+peut déclencher un scan (`POST /api/scan`) ou désactiver des scrapers depuis
+la page Santé. C'est un choix assumé ; pour refermer :
 
 ```bash
-ssh -L 3000:localhost:3000 ubuntu@vps-89f09679-vps-ovh-net
-# puis ouvrir http://localhost:3000  (produits) et http://localhost:3000/health.html (santé + toggles)
+sudo ufw allow OpenSSH && sudo ufw enable   # bloque tout sauf SSH
 ```
+
+et repasser par un tunnel : `ssh -L 3000:localhost:3000 ubuntu@vps-89f09679.vps.ovh.net`
 
 ## Toggles scrapers (activer/désactiver en live)
 
