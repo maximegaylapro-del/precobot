@@ -29,6 +29,10 @@ import LudotrotterScraper from './ludotrotter.js';
 import PlayinScraper from './playin.js';
 import BenAndGamesScraper from './benandgames.js';
 import ShopTJeuxScraper from './shoptjeux.js';
+import HakuCardsScraper from './hakucards.js';
+import LesGentlemenDuJeuScraper from './lesgentlemendujeu.js';
+import MrJoShopScraper from './mrjoshop.js';
+import BuyTheGameScraper from './buythegame.js';
 // import EbayScraper from './ebay.js';
 // import AmazonScraper from './amazon.js';
 
@@ -55,6 +59,10 @@ const ALL_SCRAPERS = () => [
   new CardakusoScraper(),
   new MysticAmbreScraper(),
   new KonobaCardsScraper(),
+  new HakuCardsScraper(),
+  new LesGentlemenDuJeuScraper(),
+  new MrJoShopScraper(),
+  new BuyTheGameScraper(),
   // new PhilibertScraper(),
 ];
 

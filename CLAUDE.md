@@ -62,6 +62,19 @@ index.js (startup)
 - Auto-backs-up and resets corrupted files
 - `markAbsentOutOfStock()` flips products that vanished from a site's page to out-of-stock (only after a successful non-empty scrape); `purgeStale()` runs at the end of each cycle and drops products unseen for `PRODUCT_RETENTION_DAYS` (default 30)
 
+**Reference** (`services/reference.js`)
+- Regroupe les annonces des 23 boutiques par **code de set** : tous les OP-16 sous une seule entrée, tous les OP-17 sous une autre, etc.
+- `extractReference(product)` → `{ key, setCode, setLabel, format, formatLabel, lang, grouped }`
+  - Codes reconnus : `OP-16`, `EB-05`, `ST-21`, `PRB-01`, plus deux synthétiques — `BS-06` (Best Selection Vol. 6) et `ANNIV-03` (3rd Anniversary Set)
+  - `format` distingue display / case scellée / blisters / double-pack / deck / binder / collection ; il est affiché sur chaque annonce mais **ne sépare pas** les groupes
+  - `grouped: false` pour les lots ("1 Display OP16 + 1 Case OP10", deux sets à la fois) et les titres sans code de set → bucket "non classés"
+- `parsePrice()` normalise `"90,00 €"` / `"€144,00"` / `"1 230,00 €"` en nombre, pour un affichage uniforme et l'ordre d'affichage
+- `buildReferences(products)` → `{ references, unclassified }`, trié : sets avec du stock d'abord ; à l'intérieur d'un set, annonces disponibles d'abord, puis par format, puis par prix croissant
+- **Dérivé à la lecture, jamais persisté** : affiner une regex ici corrige tout l'historique sans migration de `products.json`
+
+**Franchise** (`services/franchise.js`)
+- `OTHER_FRANCHISES` / `ONEPIECE_SIGNALS` / `isOtherFranchise()`, partagés par `detection.js` et `reference.js` (extraits de detection pour éviter un cycle d'import)
+
 **Matcher** (`services/matcher.js`)
 - Case-insensitive, accent-insensitive, dash/space/underscore-insensitive
 - "OP16" matches "op-16", "OP-16", "Op 16", "op 16"
@@ -76,8 +89,17 @@ index.js (startup)
 - Tracks per-cycle stats (cycle count, errors, last run time)
 
 **Dashboard** (`dashboard/`)
-- Express.js server with routes: `GET /api/products`, `GET /api/stats`, `POST /api/scan` (manual trigger)
+- Express.js server with routes: `GET /api/products`, `GET /api/references`, `GET /api/stats`, `POST /api/scan` (manual trigger)
 - Static HTML frontend at `dashboard/public/index.html` with 5s auto-refresh
+- Deux vues commutables (choix mémorisé en `localStorage`) :
+  - **Par référence** (défaut) — `/api/references`, une carte par set, dépliable, avec langue / prix / boutique / format sur chaque annonce
+  - **Par annonce** — `/api/products`, la liste à plat d'origine
+- Le filtre de langue s'applique aux deux vues
+
+**Langue** (`services/lang.js`)
+- `detectLang()` → `'fr' | 'en' | 'jp' | 'cn' | null`, depuis le titre
+- Trois passes : suffixe de fin de titre, mots complets (anglais/japonaise/…), puis abréviation nue encadrée par un délimiteur
+- La dernière passe **exige** un tiret/crochet adjacent : sans ça, le « en » français de "PRE COMMANDE EN ATTENTE" ferait passer le produit pour de l'anglais
 
 **Logger** (`services/logger.js`)
 - Pino: console (pretty-printed) + file (`logs/monitor.log`, JSON format, all debug+ messages)
