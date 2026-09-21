@@ -33,6 +33,10 @@ import HakuCardsScraper from './hakucards.js';
 import LesGentlemenDuJeuScraper from './lesgentlemendujeu.js';
 import MrJoShopScraper from './mrjoshop.js';
 import BuyTheGameScraper from './buythegame.js';
+import HikaruScraper from './hikaru.js';
+import PokeGeekScraper from './pokegeek.js';
+import RelicTcgScraper from './relictcg.js';
+import RepaireDuDragonScraper from './repairedudragon.js';
 // import EbayScraper from './ebay.js';
 // import AmazonScraper from './amazon.js';
 
@@ -63,6 +67,10 @@ const ALL_SCRAPERS = () => [
   new LesGentlemenDuJeuScraper(),
   new MrJoShopScraper(),
   new BuyTheGameScraper(),
+  new HikaruScraper(),
+  new PokeGeekScraper(),
+  new RelicTcgScraper(),
+  new RepaireDuDragonScraper(),
   // new PhilibertScraper(),
 ];
 
