@@ -3,7 +3,8 @@
 // ============================================================================
 // Routes :
 //   GET /                  -> HTML (page statique)
-//   GET /api/products      -> JSON des produits connus
+//   GET /api/products      -> JSON des produits connus (annonces à plat)
+//   GET /api/references    -> JSON groupé par référence canonique (comparateur)
 //   GET /api/stats         -> JSON des stats du scheduler
 //   POST /api/scan         -> déclenche un scan manuel
 // ============================================================================
@@ -13,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
 import { child } from '../services/logger.js';
 import * as storage from '../services/storage.js';
+import { buildReferences } from '../services/reference.js';
 import { getDisabledScrapers } from '../scrapers/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +37,19 @@ export async function startDashboard(scheduler) {
         return at - bt;
       });
       res.json({ count: products.length, products });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Vue comparateur : une entrée par référence (set + format), toutes boutiques
+  // confondues. Le regroupement est recalculé à chaque appel — 55 produits,
+  // c'est instantané, et ça évite de figer en base une classification qui
+  // évolue à chaque affinage de reference.js.
+  app.get('/api/references', (_req, res) => {
+    try {
+      const { references, unclassified } = buildReferences(storage.getAll());
+      res.json({ count: references.length, references, unclassified });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
